@@ -107,6 +107,7 @@ body { background:#101216; }
 .piano-label.root { color:var(--mint); font-weight:650; }
 .piano-roll { height:100%; flex:0 0 var(--roll-width); overflow:hidden; background:#111820; }
 .piano-cell { border-right-color:#293341; border-bottom-color:#293341; background:#19222e; }
+.piano-cell:nth-child(64n + 1) { border-left:1px solid #64748b; }
 .piano-cell.black-key { background:#141c27; }
 .piano-cell.in-scale { background:#202d38; }
 .piano-cell.in-scale.black-key { background:#1b2831; }
