@@ -8,5 +8,5 @@
     "dev": "node scripts/serve.cjs",
     "check": "node scripts/check.cjs"
   },
-  "engines": { "node": ">=20" }
+  "engines": { "node": "24.x" }
 }

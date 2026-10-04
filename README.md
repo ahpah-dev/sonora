@@ -2,6 +2,8 @@
 
 A creative music studio in the browser, with a dedicated introduction site.
 
+[Visit Sonora](https://sonora-pi-one.vercel.app/) · [Open the studio](https://sonora-pi-one.vercel.app/studio/)
+
 - **Introduction:** expressive visuals, an interactive listening room, responsive layouts, and a direct launch into the studio.
 - **Studio:** arrangement, piano roll, synth and drum design, audio import and recording, effects, automation, mixing, MIDI, and WAV export.
 - **Instruments:** layered oscillators, FM harmonics, sub and noise, filter envelopes, stereo unison, LFO modulation, and per-drum tuning.
@@ -10,7 +12,7 @@ A creative music studio in the browser, with a dedicated introduction site.
 
 ## Run locally
 
-Requires Node.js 20 or newer. No dependencies to install.
+Uses Node.js 24. No dependencies to install.
 
 ```sh
 npm run build
