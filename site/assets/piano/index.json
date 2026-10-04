@@ -1,0 +1,524 @@
+{
+  "name": "Splendid Grand Piano",
+  "layers": [
+    {
+      "key": "mp",
+      "velocity": "mp",
+      "samples": [
+        {
+          "root": 21,
+          "file": "mp-21.ogg",
+          "url": "Mp-A0"
+        },
+        {
+          "root": 23,
+          "file": "mp-23.ogg",
+          "url": "Mp-B0"
+        },
+        {
+          "root": 26,
+          "file": "mp-26.ogg",
+          "url": "Mp-D1"
+        },
+        {
+          "root": 29,
+          "file": "mp-29.ogg",
+          "url": "Mp-F1"
+        },
+        {
+          "root": 33,
+          "file": "mp-33.ogg",
+          "url": "Mp-A1"
+        },
+        {
+          "root": 36,
+          "file": "mp-36.ogg",
+          "url": "Mp-C2"
+        },
+        {
+          "root": 38,
+          "file": "mp-38.ogg",
+          "url": "Mp-D2"
+        },
+        {
+          "root": 41,
+          "file": "mp-41.ogg",
+          "url": "Mp-F2"
+        },
+        {
+          "root": 45,
+          "file": "mp-45.ogg",
+          "url": "Mp-A2"
+        },
+        {
+          "root": 48,
+          "file": "mp-48.ogg",
+          "url": "Mp-C3"
+        },
+        {
+          "root": 50,
+          "file": "mp-50.ogg",
+          "url": "Mp-D3"
+        },
+        {
+          "root": 53,
+          "file": "mp-53.ogg",
+          "url": "Mp-F3"
+        },
+        {
+          "root": 57,
+          "file": "mp-57.ogg",
+          "url": "Mp-A3"
+        },
+        {
+          "root": 60,
+          "file": "mp-60.ogg",
+          "url": "Mp-C4"
+        },
+        {
+          "root": 62,
+          "file": "mp-62.ogg",
+          "url": "Mp-D4"
+        },
+        {
+          "root": 65,
+          "file": "mp-65.ogg",
+          "url": "Mp-F4"
+        },
+        {
+          "root": 69,
+          "file": "mp-69.ogg",
+          "url": "Mp-A4"
+        },
+        {
+          "root": 71,
+          "file": "mp-71.ogg",
+          "url": "Mp-B4"
+        },
+        {
+          "root": 75,
+          "file": "mp-75.ogg",
+          "url": "Mp-D#5"
+        },
+        {
+          "root": 78,
+          "file": "mp-78.ogg",
+          "url": "Mp-F#5"
+        },
+        {
+          "root": 81,
+          "file": "mp-81.ogg",
+          "url": "Mp-A5"
+        },
+        {
+          "root": 84,
+          "file": "mp-84.ogg",
+          "url": "Mp-C6"
+        },
+        {
+          "root": 87,
+          "file": "mp-87.ogg",
+          "url": "Mp-D#6"
+        },
+        {
+          "root": 90,
+          "file": "mp-90.ogg",
+          "url": "Mp-F#6"
+        },
+        {
+          "root": 93,
+          "file": "mp-93.ogg",
+          "url": "Mp-A6"
+        },
+        {
+          "root": 94,
+          "file": "mp-94.ogg",
+          "url": "Mp-A#6"
+        }
+      ]
+    },
+    {
+      "key": "pp",
+      "velocity": "pp",
+      "samples": [
+        {
+          "root": 21,
+          "file": "pp-21.ogg",
+          "url": "PP-A0"
+        },
+        {
+          "root": 23,
+          "file": "pp-23.ogg",
+          "url": "PP-B0"
+        },
+        {
+          "root": 26,
+          "file": "pp-26.ogg",
+          "url": "PP-D1"
+        },
+        {
+          "root": 29,
+          "file": "pp-29.ogg",
+          "url": "PP-F1"
+        },
+        {
+          "root": 33,
+          "file": "pp-33.ogg",
+          "url": "PP-A1"
+        },
+        {
+          "root": 36,
+          "file": "pp-36.ogg",
+          "url": "PP-C2"
+        },
+        {
+          "root": 38,
+          "file": "pp-38.ogg",
+          "url": "PP-D2"
+        },
+        {
+          "root": 41,
+          "file": "pp-41.ogg",
+          "url": "PP-F2"
+        },
+        {
+          "root": 45,
+          "file": "pp-45.ogg",
+          "url": "PP-A2"
+        },
+        {
+          "root": 48,
+          "file": "pp-48.ogg",
+          "url": "PP-C3"
+        },
+        {
+          "root": 50,
+          "file": "pp-50.ogg",
+          "url": "PP-D3"
+        },
+        {
+          "root": 53,
+          "file": "pp-53.ogg",
+          "url": "PP-F3"
+        },
+        {
+          "root": 57,
+          "file": "pp-57.ogg",
+          "url": "PP-A3"
+        },
+        {
+          "root": 60,
+          "file": "pp-60.ogg",
+          "url": "PP-C4"
+        },
+        {
+          "root": 62,
+          "file": "pp-62.ogg",
+          "url": "PP-D4"
+        },
+        {
+          "root": 65,
+          "file": "pp-65.ogg",
+          "url": "PP-F4"
+        },
+        {
+          "root": 69,
+          "file": "pp-69.ogg",
+          "url": "PP-A4"
+        },
+        {
+          "root": 71,
+          "file": "pp-71.ogg",
+          "url": "PP-B4"
+        },
+        {
+          "root": 75,
+          "file": "pp-75.ogg",
+          "url": "PP-D#5"
+        },
+        {
+          "root": 78,
+          "file": "pp-78.ogg",
+          "url": "PP-F#5"
+        },
+        {
+          "root": 81,
+          "file": "pp-81.ogg",
+          "url": "PP-A5"
+        },
+        {
+          "root": 84,
+          "file": "pp-84.ogg",
+          "url": "PP-C6"
+        },
+        {
+          "root": 87,
+          "file": "pp-87.ogg",
+          "url": "PP-D#6"
+        },
+        {
+          "root": 90,
+          "file": "pp-90.ogg",
+          "url": "PP-F#6"
+        },
+        {
+          "root": 93,
+          "file": "pp-93.ogg",
+          "url": "PP-A6"
+        },
+        {
+          "root": 96,
+          "file": "pp-96.ogg",
+          "url": "PP-C7"
+        }
+      ]
+    },
+    {
+      "key": "ff",
+      "velocity": "ff",
+      "samples": [
+        {
+          "root": 21,
+          "file": "ff-21.ogg",
+          "url": "FF-A0"
+        },
+        {
+          "root": 23,
+          "file": "ff-23.ogg",
+          "url": "FF-B0"
+        },
+        {
+          "root": 26,
+          "file": "ff-26.ogg",
+          "url": "FF-D1"
+        },
+        {
+          "root": 29,
+          "file": "ff-29.ogg",
+          "url": "FF-F1"
+        },
+        {
+          "root": 33,
+          "file": "ff-33.ogg",
+          "url": "FF-A1"
+        },
+        {
+          "root": 36,
+          "file": "ff-36.ogg",
+          "url": "FF-C2"
+        },
+        {
+          "root": 38,
+          "file": "ff-38.ogg",
+          "url": "FF-D2"
+        },
+        {
+          "root": 41,
+          "file": "ff-41.ogg",
+          "url": "FF-F2"
+        },
+        {
+          "root": 45,
+          "file": "ff-45.ogg",
+          "url": "FF-A2"
+        },
+        {
+          "root": 48,
+          "file": "ff-48.ogg",
+          "url": "FF-C3"
+        },
+        {
+          "root": 50,
+          "file": "ff-50.ogg",
+          "url": "FF-D3"
+        },
+        {
+          "root": 53,
+          "file": "ff-53.ogg",
+          "url": "FF-F3"
+        },
+        {
+          "root": 57,
+          "file": "ff-57.ogg",
+          "url": "FF-A3"
+        },
+        {
+          "root": 60,
+          "file": "ff-60.ogg",
+          "url": "FF-C4"
+        },
+        {
+          "root": 62,
+          "file": "ff-62.ogg",
+          "url": "FF-D4"
+        },
+        {
+          "root": 65,
+          "file": "ff-65.ogg",
+          "url": "FF-F4"
+        },
+        {
+          "root": 69,
+          "file": "ff-69.ogg",
+          "url": "FF-A4"
+        },
+        {
+          "root": 71,
+          "file": "ff-71.ogg",
+          "url": "FF-B4"
+        },
+        {
+          "root": 74,
+          "file": "ff-74.ogg",
+          "url": "FF-D5"
+        },
+        {
+          "root": 77,
+          "file": "ff-77.ogg",
+          "url": "FF-F5"
+        },
+        {
+          "root": 81,
+          "file": "ff-81.ogg",
+          "url": "FF-A5"
+        }
+      ]
+    },
+    {
+      "key": "mf",
+      "velocity": "mf",
+      "samples": [
+        {
+          "root": 21,
+          "file": "mf-21.ogg",
+          "url": "Mf-A0"
+        },
+        {
+          "root": 23,
+          "file": "mf-23.ogg",
+          "url": "Mf-B0"
+        },
+        {
+          "root": 26,
+          "file": "mf-26.ogg",
+          "url": "Mf-D1"
+        },
+        {
+          "root": 29,
+          "file": "mf-29.ogg",
+          "url": "Mf-F1"
+        },
+        {
+          "root": 33,
+          "file": "mf-33.ogg",
+          "url": "Mf-A1"
+        },
+        {
+          "root": 36,
+          "file": "mf-36.ogg",
+          "url": "Mf-C2"
+        },
+        {
+          "root": 38,
+          "file": "mf-38.ogg",
+          "url": "Mf-D2"
+        },
+        {
+          "root": 41,
+          "file": "mf-41.ogg",
+          "url": "Mf-F2"
+        },
+        {
+          "root": 45,
+          "file": "mf-45.ogg",
+          "url": "Mf-A2"
+        },
+        {
+          "root": 48,
+          "file": "mf-48.ogg",
+          "url": "Mf-C3"
+        },
+        {
+          "root": 50,
+          "file": "mf-50.ogg",
+          "url": "Mf-D3"
+        },
+        {
+          "root": 53,
+          "file": "mf-53.ogg",
+          "url": "Mf-F3"
+        },
+        {
+          "root": 57,
+          "file": "mf-57.ogg",
+          "url": "Mf-A3"
+        },
+        {
+          "root": 60,
+          "file": "mf-60.ogg",
+          "url": "Mf-C4"
+        },
+        {
+          "root": 62,
+          "file": "mf-62.ogg",
+          "url": "Mf-D4"
+        },
+        {
+          "root": 65,
+          "file": "mf-65.ogg",
+          "url": "Mf-F4"
+        },
+        {
+          "root": 69,
+          "file": "mf-69.ogg",
+          "url": "Mf-A4"
+        },
+        {
+          "root": 71,
+          "file": "mf-71.ogg",
+          "url": "Mf-B4"
+        },
+        {
+          "root": 75,
+          "file": "mf-75.ogg",
+          "url": "Mf-D#5"
+        },
+        {
+          "root": 78,
+          "file": "mf-78.ogg",
+          "url": "Mf-F#5"
+        },
+        {
+          "root": 81,
+          "file": "mf-81.ogg",
+          "url": "Mf-A5"
+        },
+        {
+          "root": 84,
+          "file": "mf-84.ogg",
+          "url": "Mf-C6"
+        },
+        {
+          "root": 87,
+          "file": "mf-87.ogg",
+          "url": "Mf-D#6"
+        },
+        {
+          "root": 90,
+          "file": "mf-90.ogg",
+          "url": "Mf-F#6"
+        },
+        {
+          "root": 93,
+          "file": "mf-93.ogg",
+          "url": "Mf-A6"
+        },
+        {
+          "root": 96,
+          "file": "mf-96.ogg",
+          "url": "Mf-C7"
+        }
+      ]
+    }
+  ]
+}
