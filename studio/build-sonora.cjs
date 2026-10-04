@@ -32,7 +32,7 @@ for (const name of ['playNote','playDrum']) {
 replace('      function createClipAt(track, start)', '      function createClipAt(track, start)');
 replace("      function addClip() {\n        const track = getTrack();", "      function addClip() {\n        const track = getTrack();\n        if(track.type==='audio'){$('#studioAudioInput').click();return;}");
 replace("          if (!track) return;\n          const rect = gridEl.getBoundingClientRect(), snap", "          if (!track) return;\n          if(track.type==='audio'){project.selectedTrack=track.id;$('#studioAudioInput').click();return;}\n          const rect = gridEl.getBoundingClientRect(), snap");
-replace("      function liveNoteDown(source,pitch,velocity=.82){", "      function liveNoteDown(source,pitch,velocity=.82){\n        if(getTrack().type==='audio')return;");
+replace("      function liveNoteDown(source,pitch,velocity=.82,timestamp){", "      function liveNoteDown(source,pitch,velocity=.82,timestamp){\n        if(getTrack().type==='audio')return;");
 replace("      function clearPattern() {\n        const track = getTrack();", "      function clearPattern() {\n        const track = getTrack();\n        if(track.type==='audio'){notify('Use the audio editor to edit this clip');return;}");
 replace("      function collectEvents() {\n        const events = [];\n        project.tracks.forEach(track => {", "      function collectEvents() {\n        const events = [];\n        project.tracks.forEach(track => {\n          if(track.type==='audio')return;");
 // Live notes, held keys and offline export use exactly the same instrument voices.

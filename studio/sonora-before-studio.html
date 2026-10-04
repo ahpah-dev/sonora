@@ -825,6 +825,7 @@
         $('#redoButton').disabled = redoHistory.length === 0;
       }
       function pushUndoSnapshot(snapshot = JSON.stringify(project)) {
+        if (liveRecordSnapshot && snapshot !== liveRecordSnapshot) flushLiveRecordingHistory();
         if (snapshot === JSON.stringify(project)) return;
         if (undoHistory[undoHistory.length - 1] !== snapshot) undoHistory.push(snapshot);
         if (undoHistory.length > HISTORY_LIMIT) undoHistory.shift();
@@ -851,11 +852,13 @@
         syncAudioMix(); rebuildEffectsRouting(); renderTracks(); renderArrangement(); renderEditor(); setDirty(); updateHistoryButtons();
       }
       function undo() {
+        releaseAllLiveNotes();
         if (!undoHistory.length) return;
         redoHistory.push(JSON.stringify(project));
         restoreProjectSnapshot(undoHistory.pop()); updateHistoryButtons(); notify('Undo');
       }
       function redo() {
+        releaseAllLiveNotes();
         if (!redoHistory.length) return;
         undoHistory.push(JSON.stringify(project));
         restoreProjectSnapshot(redoHistory.pop()); updateHistoryButtons(); notify('Redo');
@@ -1720,10 +1723,10 @@
         const masterChain=connectFxChain(audio.context,masterInput,project.masterEffects,'master',audio.effectStages);masterChain.connect(audio.master);
       }
       function audioReady() {
-        if (audio.context) return audio.context.resume();
+        if (audio.context) return audio.context.state==='running'?Promise.resolve():audio.context.resume();
         const Context = window.AudioContext || window.webkitAudioContext;
         if (!Context) { notify('This browser does not support Web Audio.'); return Promise.resolve(); }
-        audio.context = new Context(); audio.master = audio.context.createGain(); audio.master.gain.value = project.masterVolume; audio.master.connect(audio.context.destination);
+        audio.context = new Context({latencyHint:'interactive'}); audio.master = audio.context.createGain(); audio.master.gain.value = project.masterVolume; audio.master.connect(audio.context.destination);
         project.tracks.forEach(track => { const gain = audio.context.createGain(); audio.trackNodes.set(track.id, gain); });
         syncAudioMix();rebuildEffectsRouting();
         return audio.context.resume();
@@ -1819,29 +1822,80 @@
         let released=false;
         return ()=>{if(released)return;released=true;const now=ctx.currentTime,end=now+release;try{param.cancelScheduledValues(now);param.setValueAtTime(Math.max(.0001,param.value),now);param.exponentialRampToValueAtTime(.0001,end);sources.forEach(source=>{try{source.stop(end+.025);}catch(_){}});window.setTimeout(()=>{try{filter.disconnect();envelope.disconnect();}catch(_){}},Math.max(0,release+.08)*1000);}catch(_){}};
       }
-      function recordDrumInput(track,kind){
+      // Keep expensive editor rebuilds and history commits out of MIDI message handlers.
+      let liveRecordSnapshot=null,liveRecordCommitTimer=null,liveRecordFrame=null,liveInputClock=null;
+      const liveRecordTracks=new Set();
+      function liveInputTiming(timestamp){
+        const now=performance.now(),received=Number.isFinite(timestamp)&&timestamp>0?Math.min(timestamp,now):now;
+        // Reuse a clock pair while keys are held: audio render quanta must not split a chord's MIDI timestamp.
+        if(audio.context&&(!liveInputClock||liveInputClock.context!==audio.context||!activeLiveNotes.size&&now-liveInputClock.performanceTime>1000))liveInputClock={context:audio.context,contextTime:audio.context.currentTime,performanceTime:now};
+        const secondsPerBeat=60/project.tempo,contextTime=liveInputClock?liveInputClock.contextTime+(received-liveInputClock.performanceTime)/1000:0;
+        const absolute=audio.playing&&audio.context?Math.max(0,audio.startedAtBeat+(contextTime-audio.startTime)/secondsPerBeat):audio.playheadBeat;
+        const length=arrangementBeats(),beat=project.loop?absolute%length:absolute;
+        return {received,absolute,beat};
+      }
+      function beginLiveRecording(){
+        if(liveRecordCommitTimer!==null){window.clearTimeout(liveRecordCommitTimer);liveRecordCommitTimer=null;flushLiveRecordingHistory();}
+        liveRecordSnapshot??=JSON.stringify(project);
+        $('#undoButton').disabled=false;
+      }
+      function flushLiveRecordingHistory(){
+        window.clearTimeout(liveRecordCommitTimer);liveRecordCommitTimer=null;
+        if(!liveRecordSnapshot)return;const before=liveRecordSnapshot;liveRecordSnapshot=null;pushUndoSnapshot(before);
+      }
+      function finishLiveRecording(){
+        if([...activeLiveNotes.values()].some(active=>active.recorded))return;
+        window.clearTimeout(liveRecordCommitTimer);liveRecordCommitTimer=window.setTimeout(flushLiveRecordingHistory,0);
+      }
+      function queueLiveRecordingUI(track){
+        liveRecordTracks.add(track);
+        if(liveRecordFrame!==null)return;
+        liveRecordFrame=requestAnimationFrame(()=>{
+          liveRecordFrame=null;
+          if(liveRecordTracks.has(getTrack())){
+            if(editorTab==='piano')redrawNotes();
+            else if(editorTab==='drums'){
+              const steps=stepsForClip(getTrack());
+              document.querySelectorAll('.drum-row').forEach((row,i)=>[...row.children].forEach((button,step)=>button.classList.toggle('active',steps[DRUM_LANES[i]]?.includes(step))));
+            }
+          }
+          for(const changed of liveRecordTracks)refreshClipPreviews(changed);
+          liveRecordTracks.clear();
+        });
+      }
+      function markLiveRecordedEvent(track,clip,suffix,timing,patternLength=16){
+        const cycle=project.loop?Math.floor(timing.absolute/arrangementBeats()):0;
+        const offset=Math.max(0,Math.floor((timing.beat-clip.start)/patternLength))*patternLength;
+        // The live voice already played this event. Let transport play it on later passes.
+        audio.scheduled.add(`${cycle}:${track.id}:${clip.id}:${offset}:${suffix}`);
+      }
+      function recordDrumInput(track,kind,timing=liveInputTiming()){
         const clip=selectedClipFor(track);if(!audio.record||!audio.playing)return;
         if(!clip){notify('Add a drum clip before recording MIDI');return;}
-        const before=JSON.stringify(project),relative=audio.playheadBeat-clip.start,step=Math.floor(((relative%4+4)%4)*4)%16,steps=stepsForClip(track,clip);if(!steps[kind].includes(step)){steps[kind].push(step);renderEditor();refreshClipPreviews(track);pushUndoSnapshot(before);setDirty();}
+        const relative=timing.beat-clip.start,step=Math.floor(((relative%4+4)%4)*4)%16,steps=stepsForClip(track,clip);
+        if(!steps[kind].includes(step)){beginLiveRecording();steps[kind].push(step);markLiveRecordedEvent(track,clip,`${kind}:${step}`,timing,4);queueLiveRecordingUI(track);finishLiveRecording();setDirty();}
       }
-      function liveDrumHit(track,pitch,velocity){const kind=LIVE_DRUM_PITCHES[pitch];if(!kind)return;recordDrumInput(track,kind);audioReady().then(()=>{if(audio.context)playDrum(kind,audio.context.currentTime+.004,velocity,track);}).catch(()=>{});}
-      function liveNoteDown(source,pitch,velocity=.82){
+      function liveDrumHit(track,pitch,velocity,timing){const kind=LIVE_DRUM_PITCHES[pitch];if(!kind)return;const play=()=>{if(audio.context)playDrum(kind,audio.context.currentTime,velocity,track);};if(audio.context?.state==='running')play();else audioReady().then(play).catch(()=>{});recordDrumInput(track,kind,timing);}
+      function liveNoteDown(source,pitch,velocity=.82,timestamp){
         if(activeLiveNotes.has(source))return;
-        const track=getTrack();if(track.type==='drums'){liveDrumHit(track,pitch,velocity);return;}
-        const clip=selectedClipFor(track);let note={start:0,pitch:clamp(Math.round(pitch),0,127),duration:Number($('#noteLength').value)||1,velocity:clamp(velocity,.05,1)},before=null,recorded=false;
-        if(audio.record&&audio.playing){if(!clip)notify('Add a clip to record MIDI notes');else{const snap=Number($('#snapSelect').value),relative=audio.playheadBeat-clip.start,position=(relative%clip.length+clip.length)%clip.length,start=snap?Math.round(position/snap)*snap:position;note.start=clamp(start,0,Math.max(0,clip.length-.0625));note.duration=Math.max(.0625,Math.min(note.duration,clip.length-note.start));before=JSON.stringify(project);notesForClip(track,clip).push(note);selectedNotes.clear();selectedNotes.add(note);audio.selectedNote=note;recorded=true;renderEditor();refreshClipPreviews(track);setDirty();}}
-        const active={pitch:note.pitch,track,note,clip,before,recorded,startedAt:performance.now(),release:null,releaseRequested:false};activeLiveNotes.set(source,active);syncKeyboardHighlights();editFocus='notes';
-        audioReady().then(async()=>{if(track.sampleId&&!importedInstrumentBuffers.has(track.sampleId))await ensureImportedInstrument(track);if(!audio.context)return;active.release=startHeldNote(track,note,note.velocity,audio.context.currentTime+.003);if(active.releaseRequested)active.release();}).catch(()=>{});
+        const timing=liveInputTiming(timestamp),track=getTrack();if(track.type==='drums'){liveDrumHit(track,pitch,velocity,timing);return;}
+        const clip=selectedClipFor(track);let note={start:0,pitch:clamp(Math.round(pitch),0,127),duration:Number($('#noteLength').value)||1,velocity:clamp(velocity,.05,1)};
+        const active={pitch:note.pitch,track,note,clip,recorded:false,startedAt:timing.received,release:null,releaseRequested:false};activeLiveNotes.set(source,active);
+        const play=()=>{if(!audio.context||active.releaseRequested)return;active.release=startHeldNote(track,note,note.velocity,audio.context.currentTime);};
+        if(audio.context?.state==='running'&&(!track.sampleId||importedInstrumentBuffers.has(track.sampleId)))play();
+        else audioReady().then(async()=>{if(track.sampleId&&!importedInstrumentBuffers.has(track.sampleId))await ensureImportedInstrument(track);play();}).catch(()=>{});
+        if(audio.record&&audio.playing){if(!clip)notify('Add a clip to record MIDI notes');else{const snap=Number($('#snapSelect').value),relative=timing.beat-clip.start,position=(relative%clip.length+clip.length)%clip.length,start=snap?Math.round(position/snap)*snap:position;note.start=clamp(start,0,Math.max(0,clip.length-.0625));note.duration=Math.max(.0625,Math.min(note.duration,clip.length-note.start));beginLiveRecording();const notes=notesForClip(track,clip);notes.push(note);markLiveRecordedEvent(track,clip,notes.length-1,timing);selectedNotes.clear();selectedNotes.add(note);audio.selectedNote=note;active.recorded=true;queueLiveRecordingUI(track);setDirty();}}
+        syncKeyboardHighlights();editFocus='notes';
       }
-      function liveNoteUp(source){
+      function liveNoteUp(source,timestamp){
         const active=activeLiveNotes.get(source);if(!active)return;activeLiveNotes.delete(source);active.releaseRequested=true;active.release?.();syncKeyboardHighlights();
-        if(active.recorded&&active.note&&active.before){const elapsed=Math.max(.0625,(performance.now()-active.startedAt)/1000*project.tempo/60),snap=Number($('#snapSelect').value),duration=snap?Math.max(snap,Math.round(elapsed/snap)*snap):elapsed,limit=Math.max(.0625,(active.clip?.length||16)-active.note.start);active.note.duration=Math.min(duration,limit);renderEditor();refreshClipPreviews(active.track);pushUndoSnapshot(active.before);setDirty();}
+        if(active.recorded&&active.note){const elapsed=Math.max(.0625,(liveInputTiming(timestamp).received-active.startedAt)/1000*project.tempo/60),snap=Number($('#snapSelect').value),duration=snap?Math.max(snap,Math.round(elapsed/snap)*snap):elapsed,limit=Math.max(.0625,(active.clip?.length||16)-active.note.start);active.note.duration=Math.min(duration,limit);queueLiveRecordingUI(active.track);finishLiveRecording();setDirty();}
       }
-      function releaseAllLiveNotes(){[...activeLiveNotes.keys()].forEach(liveNoteUp);}
-      function handleMidiMessage(input,event){const [status,pitch,velocity]=event.data||[],kind=status&0xf0,channel=status&0x0f,source=`midi:${input.id}:${channel}:${pitch}`;if(kind===0x90&&velocity>0)liveNoteDown(source,pitch,velocity/127);else if(kind===0x80||kind===0x90&&velocity===0)liveNoteUp(source);}
+      function releaseAllLiveNotes(){[...activeLiveNotes.keys()].forEach(source=>liveNoteUp(source));flushLiveRecordingHistory();}
+      function handleMidiMessage(input,event){const [status,pitch,velocity]=event.data||[],kind=status&0xf0,channel=status&0x0f,source=`midi:${input.id}:${channel}:${pitch}`;if(kind===0x90&&velocity>0)liveNoteDown(source,pitch,velocity/127,event.timeStamp);else if(kind===0x80||kind===0x90&&velocity===0)liveNoteUp(source,event.timeStamp);}
       async function connectMidiKeyboard(){
         if(!navigator.requestMIDIAccess){const status=$('#midiStatus');if(status){status.textContent='Web MIDI unavailable';status.title='Open this project in Chrome or Edge over localhost or HTTPS to use hardware MIDI.';}notify('Web MIDI requires Chrome or Edge on localhost or HTTPS');return;}
-        try{await audioReady();if(!midiAccess){midiAccess=await navigator.requestMIDIAccess({sysex:false});midiAccess.onstatechange=event=>{if(event.port?.type==='input'&&event.port.state==='disconnected'){const prefix=`midi:${event.port.id}:`;[...activeLiveNotes.keys()].filter(key=>key.startsWith(prefix)).forEach(liveNoteUp);}refreshMidiKeyboard();};}refreshMidiKeyboard();const status=$('#midiStatus');if(status?.textContent.includes('no inputs'))notify('MIDI is ready. Connect a keyboard and it will appear here.');}catch(error){const status=$('#midiStatus');if(status){status.textContent='MIDI permission denied';status.title=error?.message||'Allow MIDI access in the browser to connect a keyboard.';}notify('Could not connect to MIDI input');}
+        try{await audioReady();if(!midiAccess){midiAccess=await navigator.requestMIDIAccess({sysex:false});midiAccess.onstatechange=event=>{if(event.port?.type==='input'&&event.port.state==='disconnected'){const prefix=`midi:${event.port.id}:`;[...activeLiveNotes.keys()].filter(key=>key.startsWith(prefix)).forEach(source=>liveNoteUp(source));}refreshMidiKeyboard();};}refreshMidiKeyboard();const status=$('#midiStatus');if(status?.textContent.includes('no inputs'))notify('MIDI is ready. Connect a keyboard and it will appear here.');}catch(error){const status=$('#midiStatus');if(status){status.textContent='MIDI permission denied';status.title=error?.message||'Allow MIDI access in the browser to connect a keyboard.';}notify('Could not connect to MIDI input');}
       }
       function refreshMidiKeyboard(){
         const select=$('#midiInputSelect'),status=$('#midiStatus'),button=$('#midiConnectButton');if(!select||!status)return;
@@ -1956,6 +2010,7 @@
         await audioReady();
         if (!audio.context) return;
         await loadProjectInstruments();
+        liveInputClock=null;
         audio.playing = true; audio.scheduled.clear(); audio.metronomeBeat = -1;
         audio.startTime = audio.context.currentTime + .045;
         audio.startedAtBeat = audio.playheadBeat;
@@ -1966,6 +2021,7 @@
         scheduler();
       }
       function stopPlayback(reset = true) {
+        releaseAllLiveNotes();
         audio.playing = false; window.clearInterval(audio.timer); audio.timer = null; audio.scheduled.clear();
         $('#playButton').setAttribute('aria-label', 'Play');
         $('#playIcon').innerHTML = '<path d="M6 4.5c0-.8.9-1.2 1.5-.8l8.1 5.2a1.3 1.3 0 0 1 0 2.2l-8.1 5.2c-.6.4-1.5 0-1.5-.8V4.5Z"/>';
@@ -2521,7 +2577,7 @@
           if(editorTab==='piano'&&track.type!=='drums'&&(editFocus==='notes'||pianoFocused)&&Object.prototype.hasOwnProperty.call(LIVE_KEY_PITCHES,event.code)){event.preventDefault();liveNoteDown(`computer:${event.code}`,keyboardBasePitch+LIVE_KEY_PITCHES[event.code],.82);}
         }
       });
-      window.addEventListener('keyup',event=>{if(event.code?.startsWith('Key')||event.code?.startsWith('Digit')||['Comma','Period','Semicolon'].includes(event.code))liveNoteUp(`computer:${event.code}`);if(event.code==='Space'||event.key==='Enter')[...activeLiveNotes.keys()].filter(source=>source.startsWith('accessible:')).forEach(liveNoteUp);});
+      window.addEventListener('keyup',event=>{if(event.code?.startsWith('Key')||event.code?.startsWith('Digit')||['Comma','Period','Semicolon'].includes(event.code))liveNoteUp(`computer:${event.code}`);if(event.code==='Space'||event.key==='Enter')[...activeLiveNotes.keys()].filter(source=>source.startsWith('accessible:')).forEach(source=>liveNoteUp(source));});
       window.setInterval(() => { if (audio.playing) renderMixerMeters(); }, 260);
     })();
   </script>
