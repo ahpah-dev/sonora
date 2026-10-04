@@ -7,7 +7,8 @@ A creative music studio in the browser, with a dedicated introduction site.
 - **Introduction:** expressive visuals, an interactive listening room, responsive layouts, and a direct launch into the studio.
 - **Studio:** arrangement, piano roll, synth and drum design, audio import and recording, effects, automation, mixing, MIDI, and WAV export.
 - **Instruments:** layered oscillators, FM harmonics, sub and noise, filter envelopes, stereo unison, LFO modulation, and per-drum tuning.
-- **Piano roll:** scrollable note rows, horizontal zoom, scale guides and locking, ghost notes, velocity editing, humanize, legato, keyboard input, and undo.
+- **Piano:** synthesized Studio Grand, Felt Piano and Mellow Upright; brightness, hammer, string character, decay and release controls; 25/49/88-key performance layouts, polyphony, chord assistance, sustain and MIDI pedal input.
+- **Piano roll:** chord building and inversions, arpeggiation, precise note controls, scrollable rows, zoom, scale locking, ghost notes, velocity editing, humanize, legato, keyboard input, and undo.
 - **Projects:** browser autosave and portable `.sonora` project downloads, including imported audio.
 
 ## Run locally
@@ -29,7 +30,7 @@ npm run check
 
 `site/` contains the introduction. `studio/` contains the original self-contained workstation and the Studio / Pro extensions. `scripts/build.cjs` creates `dist/`, which Vercel hosts as a static site.
 
-The generated studio HTML is reproducible from source; edit the source files rather than the generated file. `studio/sonora-studio.test.js` checks the audio, history, import, recording, project round-trip, and export flows. `studio/sonora-pro.test.js` checks the instrument designer, patch storage, note and velocity editing, scale locking, and custom instrument export. Run these expressions in a disposable browser session after a real click on Play / Stop unlocks Web Audio. The tests alter that session's project and storage.
+The generated studio HTML is reproducible from source; edit the source files rather than the generated file. `studio/sonora-studio.test.js` checks the audio, history, import, recording, project round-trip, and export flows. `studio/sonora-pro.test.js` checks instrument design, patch storage and note editing. `studio/sonora-piano.test.js` checks piano customization, polyphony, sustain, chord recording, chord tools and piano WAV export. Run these expressions in a disposable browser session after a real click on Play / Stop unlocks Web Audio. The tests alter that session's project and storage.
 
 ## Data and browser support
 

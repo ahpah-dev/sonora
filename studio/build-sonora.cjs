@@ -8,8 +8,8 @@ function replace(find, value) {
   if (!html.includes(find)) throw new Error('Missing build anchor: ' + find.slice(0,100));
   html = html.replace(find, value);
 }
-replace('  </style>', fs.readFileSync(path.join(root,'sonora-studio.css'),'utf8') + '\n' + fs.readFileSync(path.join(root,'sonora-pro.css'),'utf8') + '\n  </style>');
-replace('      setupWorkflow();', fs.readFileSync(path.join(root,'sonora-studio.js'),'utf8') + '\n' + fs.readFileSync(path.join(root,'sonora-pro.js'),'utf8') + '\n      setupWorkflow();');
+replace('  </style>', ['sonora-studio.css','sonora-pro.css','sonora-piano.css'].map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n') + '\n  </style>');
+replace('      setupWorkflow();', ['sonora-studio.js','sonora-pro.js','sonora-piano.js'].map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n') + '\n      setupWorkflow();');
 replace("type:source.type==='drums'?'drums':'synth'", "type:source.type==='audio'?'audio':source.type==='drums'?'drums':'synth'");
 replace("if(track.type==='drums'){\n              const steps=entry.steps", "if(track.type==='audio'){\n              clip.notes=[];\n            }else if(track.type==='drums'){\n              const steps=entry.steps");
 replace('new Set(snapshot.tracks.map(track=>track.sampleId).filter(Boolean))', 'studioSampleIds(snapshot)');
@@ -36,6 +36,11 @@ replace("      function liveNoteDown(source,pitch,velocity=.82){", "      functi
 replace("      function clearPattern() {\n        const track = getTrack();", "      function clearPattern() {\n        const track = getTrack();\n        if(track.type==='audio'){notify('Use the audio editor to edit this clip');return;}");
 replace("      function collectEvents() {\n        const events = [];\n        project.tracks.forEach(track => {", "      function collectEvents() {\n        const events = [];\n        project.tracks.forEach(track => {\n          if(track.type==='audio')return;");
 // Live notes, held keys and offline export use exactly the same instrument voices.
+// Instrument clips repeat a 16-beat pattern; recorded notes must use that same range.
+replace('position=(relative%clip.length+clip.length)%clip.length', 'patternLength=Math.min(16,clip.length),position=(relative%patternLength+patternLength)%patternLength');
+replace('Math.max(0,clip.length-.0625)', 'Math.max(0,patternLength-.0625)');
+replace('Math.min(note.duration,clip.length-note.start)', 'Math.min(note.duration,patternLength-note.start)');
+replace('(active.clip?.length||16)-active.note.start', 'Math.min(16,active.clip?.length||16)-active.note.start');
 const offlineNoteStart=html.indexOf('          const renderNote = (track, note, time, duration) => {');
 const offlineNoteEnd=html.indexOf('          collectEvents().forEach',offlineNoteStart);
 if(offlineNoteStart<0||offlineNoteEnd<0)throw new Error('Missing offline voice anchor');
