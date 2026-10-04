@@ -1,0 +1,10 @@
+const fs=require('node:fs');
+const path=require('node:path');
+const {execFileSync}=require('node:child_process');
+const root=path.resolve(__dirname,'..'),output=path.join(root,'dist');
+execFileSync(process.execPath,[path.join(root,'studio/build-sonora.cjs')],{stdio:'inherit'});
+fs.mkdirSync(output,{recursive:true});
+fs.cpSync(path.join(root,'site'),output,{recursive:true});
+fs.mkdirSync(path.join(output,'studio'),{recursive:true});
+fs.copyFileSync(path.join(root,'studio/sonora.html'),path.join(output,'studio/index.html'));
+console.log('Built Sonora introduction and studio into dist/.');

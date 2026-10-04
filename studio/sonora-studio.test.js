@@ -1,0 +1,40 @@
+(async()=>{
+  const results=[], sleep=ms=>new Promise(r=>setTimeout(r,ms)),q=s=>document.querySelector(s);
+  const check=(condition,label)=>{if(!condition)throw new Error(label);results.push('PASS '+label);};
+  const save=()=>{q('#saveButton').click();return JSON.parse(localStorage.getItem('sonora-daw-project-v1'));};
+  const change=(sel,value)=>{const input=q(sel);input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));};
+  const clickText=(sel,text)=>{const button=[...document.querySelectorAll(sel)].find(b=>b.textContent===text);if(!button)throw Error('Missing button '+text);button.click();};
+  const upload=(sel,file)=>{const dt=new DataTransfer();dt.items.add(file);q(sel).files=dt.files;q(sel).dispatchEvent(new Event('change',{bubbles:true}));};
+  q('#stopButton').click();
+  check(document.querySelectorAll('.studio-browser').length===1,'studio workspace renders');
+  change('#studioPresetSearch','acid');check(q('#studioPresetList').children.length===1,'sound search filters presets');change('#studioPresetSearch','');clickText('#studioCategories button','Pads');check(q('#studioPresetList').children.length===4,'sound categories match actual preset groups');clickText('#studioCategories button','All');
+  clickText('.workspace-controls button','New');check(save().tracks.length===1&&save().tracks[0].clips.length===0,'new project starts empty');
+  q('#undoButton').click();check(save().tracks.length===4,'undo restores demo session');clickText('.workspace-controls button','New');
+  clickText('.editor-tools button','Generate');let p=save();check(p.tracks[0].clips[0].notes.length===12,'chord generation writes playable notes');
+  q('#playButton').click();await sleep(600);check(q('#playButton').getAttribute('aria-label')==='Pause','transport plays');check(q('#cpuStatus').textContent.startsWith('Peak'),'meter measures audio');q('#stopButton').click();await sleep(200);check(q('#cpuStatus').textContent==='Audio idle','stop silences scheduled instrument voices');
+  const rate=44100,frames=rate*2,bytes=new ArrayBuffer(44+frames*2),v=new DataView(bytes);const text=(at,s)=>{for(let i=0;i<s.length;i++)v.setUint8(at+i,s.charCodeAt(i));};text(0,'RIFF');v.setUint32(4,36+frames*2,true);text(8,'WAVE');text(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);text(36,'data');v.setUint32(40,frames*2,true);for(let i=0;i<frames;i++)v.setInt16(44+i*2,Math.sin(i/rate*440*Math.PI*2)*12000,true);
+  upload('#studioAudioInput',new File([bytes],'Studio test.wav',{type:'audio/wav'}));await sleep(900);p=save();const audioTrack=p.tracks.find(t=>t.type==='audio');check(audioTrack?.clips[0]?.sampleId,'audio import creates a real audio clip');check(q('.audio-editor canvas'),'audio waveform editor renders');
+  const clip=audioTrack.clips[0];check(Math.abs(clip.sourceDuration-2)<.02,'audio duration is decoded correctly');check(clip.peaks.some(v=>v>.3),'waveform peaks reflect imported samples');
+  change('#studioInspector input[aria-label="Pan"]',-1);check(save().tracks.find(t=>t.type==='audio').pan===-1,'track pan persists');
+  q('#playheadGrip').dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true}));for(let i=0;i<4;i++)q('#playheadGrip').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));clickText('.audio-editor button','Split at cursor');p=save();check(p.tracks.find(t=>t.type==='audio').clips.length===2,'audio split creates two clips');check(Math.abs(p.tracks.find(t=>t.type==='audio').clips[1].offset-60/p.tempo)<.01,'audio split advances source offset');
+  clickText('.editor-tabs button','Automation');const svg=q('.automation-svg'),r=svg.getBoundingClientRect();const capture=svg.setPointerCapture;svg.setPointerCapture=()=>{};svg.dispatchEvent(new PointerEvent('pointerdown',{clientX:r.left+20,clientY:r.top+65,pointerId:1,bubbles:true,button:0}));svg.dispatchEvent(new PointerEvent('pointerup',{pointerId:1,bubbles:true}));svg.setPointerCapture=capture;check(save().tracks.find(t=>t.type==='audio').automation.length===1,'automation points persist through project history');
+  q('#undoButton').click();check((save().tracks.find(t=>t.type==='audio').automation||[]).length===0,'automation edit supports undo');q('#redoButton').click();
+  clickText('.editor-tabs button','Mixer');check(q('input[aria-label="Studio test pan"]'),'mixer exposes stereo pan');
+  // Capture downloadable blobs without triggering native downloads during this test.
+  const blobs=[],originalURL=URL.createObjectURL,originalClick=HTMLAnchorElement.prototype.click;URL.createObjectURL=b=>{blobs.push(b);return originalURL.call(URL,b);};HTMLAnchorElement.prototype.click=function(){};
+  try{
+    q('#downloadProjectButton').click();await sleep(400);const bundle=JSON.parse(await blobs.at(-1).text());check(bundle.instruments.length===1&&bundle.instruments[0].data.length>100,'portable project bundles audio clips');
+    clickText('.workspace-controls button','New');upload('#projectFileInput',new File([JSON.stringify(bundle)],'Roundtrip.sonora',{type:'application/json'}));await sleep(650);p=save();check(p.tracks.some(t=>t.type==='audio'&&t.clips.length===2),'project round trip preserves audio type and split clips');
+    check(p.tracks.find(t=>t.type==='audio').automation.length===1,'project round trip preserves automation');
+    // Select the audio track; solo it so the exported right channel should be silent.
+    const loadedAudio=p.tracks.find(t=>t.type==='audio');const row=[...document.querySelectorAll('.track-row')].find(el=>el.dataset.track===loadedAudio.id);row.querySelector('[data-action="solo"]').click();
+    q('button[aria-label="Studio settings"]').click();change('select[aria-label="WAV sample rate"]',48000);clickText('#studioThemes button','Midnight / Blue');check(document.body.dataset.theme==='midnight','workspace theme applies');q('#studioSettings').close();
+    q('#exportWavButton').click();for(let i=0;i<30&&q('#exportWavButton').disabled;i++)await sleep(200);check(!q('#exportWavButton').disabled,'offline WAV rendering completes');const wav=blobs.at(-1);check(wav.type==='audio/wav','WAV export creates audio');const rendered=new DataView(await wav.arrayBuffer());check(rendered.getUint32(24,true)===48000,'WAV sample-rate preference is respected');let left=0,right=0;for(let i=44;i<Math.min(rendered.byteLength,44+48000*4*2);i+=4){left=Math.max(left,Math.abs(rendered.getInt16(i,true)));right=Math.max(right,Math.abs(rendered.getInt16(i+2,true)));}check(left>100&&right<3,'WAV includes imported audio and correct hard-left pan');
+    q('#playheadGrip').dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true}));for(let i=0;i<5;i++)q('#playheadGrip').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));q('#playButton').click();await sleep(150);check(q('#cpuStatus').textContent.startsWith('Peak'),'seek into an audio clip resumes its source');q('#playButton').click();await sleep(150);check(q('#cpuStatus').textContent==='Audio idle','pause silences audio clips');
+    // Exercise MediaRecorder with a synthetic audio stream; no physical microphone is used.
+    q('#stopButton').click();const ac=new AudioContext(),osc=ac.createOscillator(),dest=ac.createMediaStreamDestination();osc.connect(dest);osc.start();const originalGet=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=async()=>dest.stream;
+    q('#studioRecordMic').click();await sleep(500);check(q('#studioRecordMic').classList.contains('recording-live'),'microphone take enters recording state');q('#studioRecordMic').click();await sleep(850);check(save().tracks.find(t=>t.type==='audio').clips.length===3,'recorded take becomes a persisted audio clip');navigator.mediaDevices.getUserMedia=originalGet;osc.stop();await ac.close();
+  }finally{URL.createObjectURL=originalURL;HTMLAnchorElement.prototype.click=originalClick;}
+  q('#stopButton').click();
+  return results;
+})()

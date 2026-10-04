@@ -1,0 +1,12 @@
+{
+  "name": "sonora",
+  "version": "3.0.0",
+  "private": true,
+  "description": "A creative music studio in your browser, with a dedicated Sonora introduction site.",
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "dev": "node scripts/serve.cjs",
+    "check": "node scripts/check.cjs"
+  },
+  "engines": { "node": ">=20" }
+}

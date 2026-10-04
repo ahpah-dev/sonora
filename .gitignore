@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.vercel/
+.env*
+!.env.example
+*.log
+.DS_Store
+studio/sonora.html
+screenshots/
+sonora-*.png
+
+.vercel
+.env*

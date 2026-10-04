@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#10130f">
+  <meta name="description" content="Meet Sonora. A creative music studio in your browser. Shape custom instruments, write melodies, build beats and export your next track. Free to use, no account needed.">
+  <meta property="og:title" content="Sonora — Less setup. More sound.">
+  <meta property="og:description" content="A little idea. A whole world of sound. Make music in your browser with Sonora.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/assets/social.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <title>Sonora — Less setup. More sound.</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/site.css">
+  <script src="/site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="nav-shell">
+    <nav class="nav container" aria-label="Main navigation">
+      <a class="brand" href="/" aria-label="Sonora home"><img src="/assets/favicon.svg" alt="" width="30" height="30"><span>sonora<span class="brand-dot">.</span></span></a>
+      <div class="nav-links"><a href="#studio">The studio</a><a href="#sounds">The sounds</a><a href="#possibilities">The possibilities</a></div>
+      <a class="nav-cta" href="/studio/">Open Studio <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+  <main id="main">
+    <section class="hero container">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="live-dot"></span> A NEW SPACE TO MAKE NOISE</div>
+        <h1>Less setup.<br><span class="accent">More sound.</span></h1>
+        <p class="hero-description">That melody in your head deserves a little more room.<br class="desktop-break"> Meet your new music studio. Right here, in your browser.</p>
+        <div class="hero-actions"><a class="button button-primary" href="/studio/">Start making music <span aria-hidden="true">↗</span></a><a class="button button-quiet" href="#studio"><span class="play-outline" aria-hidden="true">▷</span> Explore the studio</a></div>
+        <div class="hero-footnote"><span class="tiny-check">✓</span> Free to use <span>·</span> No install <span>·</span> No account needed</div>
+      </div>
+      <div class="sound-sculpture" aria-hidden="true">
+        <div class="orbital orbital-one"></div><div class="orbital orbital-two"></div><div class="orbital orbital-three"></div>
+        <div class="sculpture-grid"></div><div class="sculpture-glow"></div>
+        <div class="wave-bars" id="heroBars"></div>
+        <div class="floating-tag tag-one"><span class="tag-dot"></span> IDEAS → FREQUENCIES</div>
+        <div class="floating-tag tag-two">112 <span>BPM</span><i class="tag-meter"></i></div>
+        <div class="sculpture-caption"><span>01 / LIMITLESS CREATIVITY</span><span>PRESS PLAY ON WHAT’S NEXT ↗</span></div>
+      </div>
+      <div class="hero-bottom"><span>A LITTLE IDEA. A WHOLE WORLD OF SOUND.</span><a href="#studio">SCROLL TO DISCOVER <span aria-hidden="true">↓</span></a></div>
+    </section>
+    <div class="ticker" aria-hidden="true"><div>FIND YOUR FREQUENCY <span>✳</span> MAKE SOMETHING FEEL SOMETHING <span>✳</span> FOLLOW THE SOUND <span>✳</span> FIND YOUR FREQUENCY <span>✳</span> MAKE SOMETHING FEEL SOMETHING <span>✳</span> FOLLOW THE SOUND <span>✳</span></div></div>
+    <section class="studio-section container" id="studio">
+      <div class="section-heading reveal"><div><div class="eyebrow">01 / YOUR CREATIVE HOME</div><h2>From first note<br>to <span>one more listen.</span></h2></div><p>Space to experiment. Tools to go deeper.<br>A complete creative flow that keeps up<br>with your next idea.</p></div>
+      <div class="studio-showcase reveal">
+        <div class="window-bar"><span class="window-dots"><i></i><i></i><i></i></span><span>SONORA STUDIO / MIDNIGHT IN MOTION</span><span class="window-live"><i></i> ALL SYSTEMS CREATIVE</span></div>
+        <div class="preview-image"><img src="/assets/studio.png" alt="Sonora's studio with a sound library, four colorful tracks, an instrument inspector and an upgraded piano roll with note velocities" width="1600" height="1000" loading="lazy"><a class="preview-launch" href="/studio/">Step inside <span aria-hidden="true">↗</span></a></div>
+        <div class="showcase-footer"><span><i class="live-dot"></i> YOUR NEXT SESSION IS ONE CLICK AWAY</span><span>COMPOSE. SHAPE. MIX. REPEAT.</span></div>
+      </div>
+      <div class="studio-benefits reveal"><div><span>01</span><strong>Follow your ideas</strong><p>Arrange patterns, layer tracks, and try something different. Undo is always close.</p></div><div><span>02</span><strong>Go beyond presets</strong><p>Build your own instruments. Layer oscillators, shape envelopes, and add movement.</p></div><div><span>03</span><strong>Make it yours</strong><p>Write with precision. Mix with intention. Take your track with you as WAV or MIDI.</p></div></div>
+    </section>
+    <section class="sounds-section" id="sounds">
+      <div class="sounds-layout container">
+        <div class="sounds-copy reveal"><div class="eyebrow">02 / A SOUND WITH YOUR NAME ON IT</div><h2>Good sounds.<br><span>Great starting points.</span></h2><p>Soft keys. Deep bass. Drifting pads. Punchy drums.<br>Start with a sound that moves you, then make it<br class="desktop-break"> something only you would make.</p><div class="sound-count"><strong>34</strong><div>FACTORY SOUNDS<br><span>and room for your own.</span></div></div><a class="inline-link" href="/studio/">Find your sound <span aria-hidden="true">↗</span></a></div>
+        <div class="sound-player reveal">
+          <div class="player-top"><span class="eyebrow">THE LISTENING ROOM</span><span class="player-live"><i></i> INTERACTIVE</span></div>
+          <div class="sound-tabs" role="group" aria-label="Choose a sound"><button class="active" data-sound="glass" aria-pressed="true">Glass Keys</button><button data-sound="warm" aria-pressed="false">Warm EP</button><button data-sound="cloud" aria-pressed="false">Cloud Pad</button></div>
+          <div class="player-display"><canvas id="soundCanvas" width="700" height="200" aria-label="Animated waveform visualization"></canvas><div class="player-sound-name"><span id="soundCategory">KEYS / 01</span><strong id="soundName">Glass Keys</strong></div></div>
+          <div class="demo-keys" role="group" aria-label="Play notes"><button data-pitch="60">C<span>1</span></button><button data-pitch="62">D<span>2</span></button><button data-pitch="63">E♭<span>3</span></button><button data-pitch="65">F<span>4</span></button><button data-pitch="67">G<span>5</span></button><button data-pitch="68">A♭<span>6</span></button><button data-pitch="70">B♭<span>7</span></button><button data-pitch="72">C<span>8</span></button></div>
+          <div class="player-controls"><button id="demoPlay" class="demo-play" aria-pressed="false"><span aria-hidden="true">▷</span> Play a little inspiration</button><span id="demoStatus" role="status">CLICK A KEY. START SOMETHING.</span></div>
+          <p class="player-note">Sound starts when you press play. Headphones welcome.</p>
+        </div>
+      </div>
+    </section>
+    <section class="possibilities container" id="possibilities">
+      <div class="section-heading reveal"><div><div class="eyebrow">03 / SMALL DETAILS. BIG POSSIBILITIES.</div><h2>Made for the<br><span>“what if?” moments.</span></h2></div><p>Everything you need to get into a flow.<br>Enough depth to stay there.</p></div>
+      <div class="feature-grid">
+        <article class="feature-card feature-roll reveal"><div class="card-heading"><span class="feature-number">01 / COMPOSE</span><span aria-hidden="true">↗</span></div><div class="mini-roll" aria-hidden="true"><i style="--x:4%;--y:67%;--w:19%"></i><i style="--x:24%;--y:48%;--w:11%"></i><i style="--x:38%;--y:27%;--w:19%"></i><i style="--x:61%;--y:8%;--w:16%"></i><i style="--x:80%;--y:27%;--w:13%"></i><div class="mini-playhead"></div></div><h3>Every note. In its place.</h3><p>A piano roll with scale guides, ghost notes, zoom, and hands-on velocity editing. Precision when you want it. Happy accidents when you don’t.</p></article>
+        <article class="feature-card feature-instrument reveal"><div class="card-heading"><span class="feature-number">02 / SHAPE</span><span aria-hidden="true">↗</span></div><div class="mini-synth" aria-hidden="true"><div class="mini-knob" style="--rotation:-35deg"><i></i><span>TONE</span></div><div class="mini-knob" style="--rotation:32deg"><i></i><span>MOTION</span></div><div class="mini-knob" style="--rotation:68deg"><i></i><span>CHARACTER</span></div></div><h3>A signature sound. Yours.</h3><p>Layered oscillators, FM harmonics, filter envelopes, stereo unison, and modulation. Save your custom patches and come back to them.</p></article>
+        <article class="feature-card feature-mix reveal"><div class="card-heading"><span class="feature-number">03 / FINISH</span><span aria-hidden="true">↗</span></div><div class="mini-mixer" aria-hidden="true"><div style="--level:70%;--color:#c4f580"><i></i><b></b><span>KEYS</span></div><div style="--level:52%;--color:#b5a0ef"><i></i><b></b><span>BASS</span></div><div style="--level:82%;--color:#f79b87"><i></i><b></b><span>DRUMS</span></div><div style="--level:36%;--color:#82d7c8"><i></i><b></b><span>PADS</span></div></div><h3>Give your track its moment.</h3><p>Pan, automate, and sculpt with effects. Bring in audio, record a take, then export your mix at 44.1 or 48 kHz.</p></article>
+      </div>
+      <div class="local-banner reveal"><span class="local-icon" aria-hidden="true">⌁</span><div><strong>Your creativity stays close.</strong><p>Projects save in this browser. Download a project to keep a portable copy, including your imported audio.</p></div><span class="local-pill"><i class="live-dot"></i> LOCAL FIRST</span></div>
+    </section>
+    <section class="closing container reveal"><div class="closing-orbit" aria-hidden="true"></div><div class="eyebrow">NO PERFECT TIME. JUST YOUR NEXT IDEA.</div><h2>Go on.<br><span>Make some noise.</span></h2><a class="button button-primary" href="/studio/">Your studio is ready <span aria-hidden="true">↗</span></a><p>Open a tab. Find your flow.</p></section>
+  </main>
+  <footer class="footer container"><a class="brand" href="/"><img src="/assets/favicon.svg" alt="" width="25" height="25"><span>sonora<span class="brand-dot">.</span></span></a><span>MADE FOR THE MUSIC IN YOU.</span><div><a href="https://github.com/davidegeric-cloud/sonora" target="_blank" rel="noopener noreferrer">GitHub ↗</a><a href="/studio/">Open Studio ↗</a><span>© 2026 Sonora</span></div></footer>
+</body>
+</html>
