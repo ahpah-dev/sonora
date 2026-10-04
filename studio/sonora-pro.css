@@ -95,7 +95,7 @@ body { background:#101216; }
 .pro-roll-controls label { display:flex; align-items:center; gap:4px; font-size:10px; color:#a3b2c6; }
 .pro-roll-controls input[type=checkbox] { accent-color:var(--mint); }
 .piano-editor { --roll-width:100%; --row-height:20px; }
-.pro-roll-ruler { flex:0 0 25px; height:25px; overflow:hidden; position:relative; padding-left:58px; background:#212833; border-bottom:1px solid #455164; }
+.pro-roll-ruler { flex:0 0 25px; height:25px; overflow:hidden; position:relative; padding-left:58px; background:#212833; border-bottom:1px solid #455164; cursor:ew-resize; touch-action:none; user-select:none; }
 .pro-roll-ruler-inner { height:25px; display:grid; grid-template-columns:repeat(16,1fr); width:var(--roll-width); }
 .pro-roll-ruler-inner span { font:9px ui-monospace,monospace; color:#8899ad; border-left:1px solid #303b4b; padding:6px 7px; }
 .pro-roll-ruler-inner span:nth-child(4n+1) { color:#d2dfef; border-left-color:#536379; }
@@ -119,6 +119,11 @@ body { background:#101216; }
 .pro-ghost-note { position:absolute; height:calc(var(--row-height) - 3px); border:1px solid #8896ab38; background:#8594a013; border-radius:2px; pointer-events:none; }
 .roll-hint { display:none; }
 .pro-roll-playhead { position:absolute; top:0; bottom:0; width:1px; background:#e9ffb9; box-shadow:0 0 8px #d9ff8977; z-index:4; pointer-events:none; }
+.pro-roll-playhead-grip { position:absolute; z-index:6; top:0; width:12px; height:25px; padding:0; transform:translateX(-50%); border:0; border-radius:3px; background:transparent; cursor:ew-resize; touch-action:none; }
+.pro-roll-playhead-grip::before { content:""; position:absolute; top:3px; left:3px; width:0; height:0; border-left:3px solid transparent; border-right:3px solid transparent; border-top:5px solid #e9ffb9; filter:drop-shadow(0 0 3px #d9ff89aa); }
+.pro-roll-playhead-grip::after { content:""; position:absolute; top:8px; bottom:0; left:5px; width:2px; border-radius:2px; background:#e9ffb9; box-shadow:0 0 5px #d9ff8977; }
+.pro-roll-playhead-grip:hover::before,.pro-roll-playhead-grip:focus-visible::before { border-top-color:#fff; }
+.pro-roll-playhead-grip:focus-visible { outline:2px solid #e9ffb9; outline-offset:-2px; }
 .pro-velocity { flex:0 0 62px; min-height:62px; display:flex; border-top:1px solid #425068; background:#121922; }
 .pro-velocity-label { flex:0 0 58px; width:58px; display:flex; align-items:center; justify-content:center; color:#9cabbd; font-size:8px; letter-spacing:.06em; background:#1e2631; }
 .pro-velocity-scroll { overflow:hidden; flex:1; }
