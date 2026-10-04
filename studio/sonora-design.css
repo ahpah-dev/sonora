@@ -188,8 +188,8 @@ input[type=range]::-moz-range-thumb { width:9px; height:9px; background:#e0ded6;
 .piano-cell.black-key { background:#16131e; }
 .piano-cell.in-scale { background:#201c2b; }
 .piano-cell.in-scale.black-key { background:#1b1725; }
-.piano-cell.beat-line { border-right-color:#ffffff09; }
-.piano-cell.bar-line { border-right-color:#c9afe327; }
+.piano-cell.beat-line { box-shadow:inset 1px 0 #ffffff09; }
+.piano-cell.bar-line { box-shadow:inset 1px 0 #c9afe327; }
 .piano-cell.root-line { border-bottom-color:#c9afe313; }
 .note { border:1px solid color-mix(in srgb,var(--note-color) 38%,#fff); background:color-mix(in srgb,var(--note-color) 82%,#292130); color:#25311b; border-radius:4px; font-size:9px; font-weight:500; box-shadow:0 1px 3px #0002; }
 .note.selected { background:var(--note-color); border-color:#f5ffd8; box-shadow:0 0 0 1px #f5ffd858; }
