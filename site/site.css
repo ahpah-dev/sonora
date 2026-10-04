@@ -142,9 +142,9 @@ h2 span { color:var(--muted); }
 .mini-playhead { position:absolute; left:45%; width:1px; top:0; bottom:0; background:#e4ffac; animation:scan 7s linear infinite; }
 @keyframes scan { 0% { left:0; opacity:0; } 5% { opacity:1; } 95% { opacity:1; } 100% { left:100%; opacity:0; } }
 .mini-synth { display:flex; gap:16px; align-items:center; justify-content:center; height:114px; margin-top:27px; }
-.mini-knob { position:relative; width:65px; height:65px; border-radius:50%; background:linear-gradient(135deg,#425b32,#1e2c17); border:5px solid #a4c38520; box-shadow:0 0 0 1px #b4db8833,inset 1px 1px 5px #a4c38520,3px 5px 10px #0004; transform:rotate(var(--rotation)); }
-.mini-knob i { position:absolute; width:3px; height:13px; top:4px; left:calc(50% - 1.5px); border-radius:3px; background:var(--lime); }
-.mini-knob span { position:absolute; top:79px; left:50%; font-size:7px; letter-spacing:1px; color:#7f9d69; transform:translateX(-50%) rotate(calc(-1 * var(--rotation))); }
+.mini-knob { position:relative; width:65px; height:65px; border-radius:50%; background:linear-gradient(135deg,#425b32,#1e2c17); border:5px solid #a4c38520; box-shadow:0 0 0 1px #b4db8833,inset 1px 1px 5px #a4c38520,3px 5px 10px #0004; }
+.mini-knob i { position:absolute; width:3px; height:13px; top:4px; left:calc(50% - 1.5px); border-radius:3px; background:var(--lime); transform-origin:50% 24px; transform:rotate(var(--rotation)); }
+.mini-knob span { position:absolute; top:79px; left:50%; font-size:7px; letter-spacing:1px; color:#7f9d69; transform:translateX(-50%); }
 .mini-mixer { height:114px; margin-top:27px; display:flex; justify-content:center; gap:28px; }
 .mini-mixer>div { width:29px; height:100px; background:repeating-linear-gradient(to bottom,#2b3a22 0 3px,transparent 3px 6px); position:relative; border-radius:2px; }
 .mini-mixer i { position:absolute; height:var(--level); bottom:0; width:7px; left:0; background:repeating-linear-gradient(to top,var(--color) 0 3px,transparent 3px 6px); opacity:.75; }
