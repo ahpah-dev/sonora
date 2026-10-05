@@ -16,6 +16,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .studio-tag { display:none; }
 .transport { gap:5px; padding:5px; border:1px solid #ffffff0c; border-radius:12px; background:#101113; }
 .transport .icon-button { width:32px; height:34px; color:#929399; }
+.transport .count-in-button { width:38px; min-width:38px; padding:0 5px; color:#929399; font-size:9px; font-weight:700; letter-spacing:.04em; }
+.transport .count-in-button.active { color:#e4d1ff; border-color:#e4d1ff38; background:#e4d1ff12; }
 .transport .play-button { width:36px; height:36px; border-radius:8px; color:#1a2611; background:var(--mint); }
 .record-button { gap:5px; font-size:10px; }
 .record-dot { width:6px; height:6px; }

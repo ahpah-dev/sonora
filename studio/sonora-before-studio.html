@@ -588,6 +588,7 @@
         <span class="transport-sep"></span>
         <div class="bpm-box"><input id="tempoInput" type="number" min="40" max="240" value="112" aria-label="Tempo"><span>BPM</span></div>
         <button id="metronomeButton" class="icon-button" title="Toggle metronome" aria-label="Toggle metronome"><svg viewBox="0 0 20 20" fill="none"><path d="m10 3-5.5 14h11L10 3Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="m10 8 3.3 3.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="8" r="1.1" fill="currentColor"/></svg></button>
+        <button id="countInButton" class="icon-button count-in-button" title="Toggle one-bar count-in before playback" aria-label="Toggle one-bar count-in" aria-pressed="false">IN</button>
         <span class="time-display" id="positionDisplay">01:01:000</span>
       </div>
       <div class="top-actions">
@@ -723,7 +724,7 @@
       const emptyDrumSteps = () => Object.fromEntries(DRUM_LANES.map(kind => [kind, []]));
       const defaultProject = () => ({
         title: 'Midnight in Motion', tempo: 112, selectedTrack: 'lead', selectedClip: 'lead-1',
-        metronome: false, loop: true, zoom: 1, masterVolume: .82, masterEffects: [],
+        metronome: false, countIn: false, loop: true, zoom: 1, masterVolume: .82, masterEffects: [],
         tracks: [
           { id: 'lead', name: 'Lead', instrument: 'Glass Keys', type: 'synth', color: COLORS.lead, volume: .78, mute: false, solo: false, waveform: 'triangle', clips: [{ id: 'lead-1', name: 'Main motif', start: 0, length: 16 }], notes: [{start:0,pitch:60,duration:1,velocity:.82},{start:1,pitch:63,duration:.5,velocity:.72},{start:2,pitch:67,duration:1,velocity:.8},{start:4,pitch:70,duration:1,velocity:.77},{start:6,pitch:67,duration:.5,velocity:.7},{start:7,pitch:63,duration:1,velocity:.82},{start:9,pitch:60,duration:1.5,velocity:.76},{start:12,pitch:58,duration:1,velocity:.72},{start:14,pitch:60,duration:1.5,velocity:.82}] },
           { id: 'bass', name: 'Sub bass', instrument: 'Deep Mono', type: 'synth', color: COLORS.bass, volume: .72, mute: false, solo: false, waveform: 'sawtooth', clips: [{ id: 'bass-1', name: 'Low end', start: 0, length: 32 }], notes: [{start:0,pitch:36,duration:1.5,velocity:.9},{start:2,pitch:36,duration:1,velocity:.76},{start:4,pitch:43,duration:1.5,velocity:.85},{start:6,pitch:39,duration:1,velocity:.75},{start:8,pitch:34,duration:1.5,velocity:.9},{start:10,pitch:34,duration:1,velocity:.75},{start:12,pitch:41,duration:1.5,velocity:.84},{start:14,pitch:39,duration:1.5,velocity:.82}] },
@@ -774,7 +775,7 @@
       const gridEl = $('#arrangementGrid');
       const editorBodyEl = $('#editorBody');
       const rulerEl = $('#ruler');
-      const audio = { context: null, master: null, trackNodes: new Map(), effectStages: new Map(), timer: null, startTime: 0, startedAtBeat: 0, playheadBeat: 0, scheduled: new Set(), playing: false, record: false, selectedNote: null, drag: null, metronomeBeat: -1, lastDisplay: '', lastPreviewAt: -Infinity };
+      const audio = { context: null, master: null, trackNodes: new Map(), effectStages: new Map(), timer: null, startTime: 0, startedAtBeat: 0, playheadBeat: 0, scheduled: new Set(), playing: false, record: false, selectedNote: null, drag: null, metronomeBeat: -1, countInStart: null, countInBeat: -1, lastDisplay: '', lastPreviewAt: -Infinity };
       const importedInstrumentBuffers = new Map();
       const importedInstrumentLoads = new Map();
       const importedInstrumentRecords = new Map();
@@ -1970,7 +1971,8 @@
       function scheduler() {
         if (!audio.playing || !audio.context) return;
         const secondsPerBeat = 60 / project.tempo;
-        const currentBeat = audio.startedAtBeat + (audio.context.currentTime - audio.startTime) / secondsPerBeat;
+        const now = audio.context.currentTime, countingIn = audio.countInStart !== null && now < audio.startTime;
+        const currentBeat = audio.startedAtBeat + (now - audio.startTime) / secondsPerBeat;
         const events = collectEvents(), loopLength = arrangementBeats();
         const firstCycle = project.loop ? Math.max(0, Math.floor(currentBeat / loopLength)) : 0;
         const lastCycle = project.loop ? firstCycle + 1 : 0;
@@ -1985,7 +1987,17 @@
             else playNote(event.track, event.note, Math.max(eventTime, audio.context.currentTime), event.duration);
           }
         }
-        if (project.metronome) {
+        if (countingIn) {
+          const beatIndex = Math.floor((now - audio.countInStart) / secondsPerBeat);
+          if (beatIndex >= 0 && beatIndex < 4 && beatIndex !== audio.countInBeat) {
+            audio.countInBeat = beatIndex;
+            const time = Math.max(now + .004, audio.countInStart + beatIndex * secondsPerBeat);
+            const osc = audio.context.createOscillator(), gain = audio.context.createGain();
+            osc.type = 'sine'; osc.frequency.value = beatIndex === 0 ? 1200 : 850;
+            gain.gain.setValueAtTime(.08, time); gain.gain.exponentialRampToValueAtTime(.001, time + .035);
+            osc.connect(gain); gain.connect(audio.master); osc.start(time); osc.stop(time + .04);
+          }
+        } else if (project.metronome) {
           const beatIndex = Math.floor(currentBeat);
           if (beatIndex !== audio.metronomeBeat) {
             audio.metronomeBeat = beatIndex;
@@ -1998,10 +2010,10 @@
         }
         const visibleBeats = arrangementBeats();
         if (!project.loop && currentBeat >= visibleBeats) { stopPlayback(); return; }
-        const shownBeat = currentBeat % visibleBeats;
+        const shownBeat = (countingIn ? audio.startedAtBeat : currentBeat) % visibleBeats;
         audio.playheadBeat = shownBeat;
         $('#playhead').style.left = `${shownBeat / visibleBeats * 100}%`;
-        const position = formatBarBeat(shownBeat);
+        const position = countingIn ? `IN ${Math.max(1,audio.countInBeat+1)}/4` : formatBarBeat(shownBeat);
         $('#playheadGrip').setAttribute('aria-valuenow', String(shownBeat));
         $('#playheadGrip').setAttribute('aria-valuetext', position);
         if (position !== audio.lastDisplay) { $('#positionDisplay').textContent = position; audio.lastDisplay = position; }
@@ -2012,7 +2024,9 @@
         await loadProjectInstruments();
         liveInputClock=null;
         audio.playing = true; audio.scheduled.clear(); audio.metronomeBeat = -1;
-        audio.startTime = audio.context.currentTime + .045;
+        const countInBeats = project.countIn ? 4 : 0, secondsPerBeat = 60 / project.tempo;
+        audio.startTime = audio.context.currentTime + .045 + countInBeats * secondsPerBeat;
+        audio.countInStart = countInBeats ? audio.startTime - countInBeats * secondsPerBeat : null; audio.countInBeat = -1;
         audio.startedAtBeat = audio.playheadBeat;
         $('#playButton').setAttribute('aria-label', 'Pause');
         $('#playIcon').innerHTML = '<path d="M5 4.5h3.4v11H5zM11.6 4.5H15v11h-3.4z"/>';
@@ -2023,6 +2037,7 @@
       function stopPlayback(reset = true) {
         releaseAllLiveNotes();
         audio.playing = false; window.clearInterval(audio.timer); audio.timer = null; audio.scheduled.clear();
+        audio.countInStart = null; audio.countInBeat = -1;
         $('#playButton').setAttribute('aria-label', 'Play');
         $('#playIcon').innerHTML = '<path d="M6 4.5c0-.8.9-1.2 1.5-.8l8.1 5.2a1.3 1.3 0 0 1 0 2.2l-8.1 5.2c-.6.4-1.5 0-1.5-.8V4.5Z"/>';
         if (reset) { audio.playheadBeat = 0; $('#positionDisplay').textContent = '01:01:000'; $('#playhead').style.left = '0%'; }
@@ -2401,7 +2416,7 @@
       }
       function normalizeProjectFile(raw) {
         if(!raw||!Array.isArray(raw.tracks)||!raw.tracks.length||raw.tracks.length>64)throw new Error('Choose a valid Sonora project with 1–64 tracks');
-        const next=clone(raw);next.title=String(raw.title||'Untitled').slice(0,40);next.tempo=clamp(finiteNumber(raw.tempo,112),40,240);next.masterVolume=clamp(finiteNumber(raw.masterVolume,.82),0,1);next.masterEffects=normalizeFxChain(raw.masterEffects);next.zoom=clamp(finiteNumber(raw.zoom,1),.7,2);next.loop=raw.loop!==false;next.metronome=Boolean(raw.metronome);
+        const next=clone(raw);next.title=String(raw.title||'Untitled').slice(0,40);next.tempo=clamp(finiteNumber(raw.tempo,112),40,240);next.masterVolume=clamp(finiteNumber(raw.masterVolume,.82),0,1);next.masterEffects=normalizeFxChain(raw.masterEffects);next.zoom=clamp(finiteNumber(raw.zoom,1),.7,2);next.loop=raw.loop!==false;next.metronome=Boolean(raw.metronome);next.countIn=Boolean(raw.countIn);
         const selectedIndex=Math.max(0,raw.tracks.findIndex(t=>t.id===raw.selectedTrack));let selectedClipId=null;
         next.tracks=raw.tracks.map((source,index)=>{
           if(!source||!Array.isArray(source.clips)||source.clips.length>512)throw new Error('Invalid track clips in project');
@@ -2473,6 +2488,7 @@
       $('#projectTitle').value = project.title;
       $('#tempoInput').value = project.tempo;
       $('#metronomeButton').classList.toggle('active', project.metronome);
+      $('#countInButton').classList.toggle('active', Boolean(project.countIn)); $('#countInButton').setAttribute('aria-pressed', String(Boolean(project.countIn)));
       $('#loopButton').classList.toggle('active', project.loop);
       if (getTrack().type === 'drums') editorTab = 'drums';
       renderTracks(); renderArrangement(); renderEditor(); updateHistoryButtons();
@@ -2495,6 +2511,7 @@
       $('#exportButton').addEventListener('click', exportMidi);
       $('#exportWavButton').addEventListener('click', exportWav);
       $('#metronomeButton').addEventListener('click', () => { project.metronome = !project.metronome; $('#metronomeButton').classList.toggle('active', project.metronome); setDirty(); });
+      $('#countInButton').addEventListener('click', () => { project.countIn = !project.countIn; $('#countInButton').classList.toggle('active', project.countIn); $('#countInButton').setAttribute('aria-pressed', String(project.countIn)); setDirty(); });
       $('#loopButton').addEventListener('click', () => { project.loop = !project.loop; $('#loopButton').classList.toggle('active', project.loop); setDirty(); });
       $('#addTrackButton').addEventListener('click', addTrack);
       $('#addDrumTrackButton').addEventListener('click', addDrumTrack);
