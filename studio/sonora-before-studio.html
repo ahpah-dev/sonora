@@ -136,7 +136,9 @@
     .clip-name { position: relative; z-index: 1; padding-right: 20px; color: color-mix(in srgb, var(--clip-color) 76%, white); font-size: 9px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .clip-delete { position: absolute; z-index: 5; top: 3px; right: 4px; width: 19px; height: 19px; display: grid; place-items: center; padding: 0; border: 1px solid #595d63; border-radius: 4px; background: #17191de8; color: #ffaaa2; opacity: 1; cursor: pointer; font-size: 14px; line-height: 1; }
     .clip-delete:hover { background: #5a2a28; color: #ffaaa2; }
-    .clip-resize-handle { position: absolute; z-index: 4; right: 0; bottom: 0; width: 13px; height: 14px; border: 0; padding: 0; border-radius: 5px 0 5px 0; background: linear-gradient(135deg, transparent 38%, color-mix(in srgb, var(--clip-color) 70%, white) 41% 48%, transparent 51% 61%, color-mix(in srgb, var(--clip-color) 70%, white) 64% 71%, transparent 74%); cursor: ew-resize; opacity: .72; }
+    .clip-resize-handle { position: absolute; z-index: 4; top: 0; right: 0; bottom: 0; width: 9px; height: auto; border: 0; padding: 0; border-radius: 0 5px 5px 0; background: linear-gradient(90deg, transparent 25%, color-mix(in srgb, var(--clip-color) 55%, white) 55%, transparent 80%); cursor: ew-resize; opacity: .55; }
+    .clip-trim-left { position: absolute; z-index: 4; top: 0; bottom: 0; left: 0; width: 9px; border: 0; padding: 0; border-radius: 5px 0 0 5px; background: linear-gradient(90deg, transparent 20%, color-mix(in srgb, var(--clip-color) 55%, white) 50%, transparent 75%); cursor: ew-resize; opacity: .55; }
+    .clip-trim-left:hover, .clip-resize-handle:hover { opacity: 1; }
     .clip-resize-handle:hover { opacity: 1; background-color: #ffffff14; }
     .clip.resizing { z-index: 6; opacity: .86; }
     .clip-info { position: relative; z-index: 1; margin-top: 4px; color: color-mix(in srgb, var(--clip-color) 62%, #b9babd); font-size: 8px; }
@@ -1240,19 +1242,19 @@
             element.style.setProperty('--clip-width', `${clip.length / visibleBeats * 100}%`);
             element.style.setProperty('--clip-color', track.color);
             element.dataset.clipId = clip.id;
-            element.innerHTML = `<div class="clip-name"></div><div class="clip-info"></div><div class="clip-wave">${clipPreviewMarkup(track, clip)}</div><button class="clip-delete" title="Delete clip" aria-label="Delete clip">×</button><button class="clip-resize-handle" title="Drag to resize clip" aria-label="Resize clip"></button>`;
+            element.innerHTML = `<div class="clip-name"></div><div class="clip-info"></div><div class="clip-wave">${clipPreviewMarkup(track, clip)}</div><button class="clip-delete" title="Delete clip" aria-label="Delete clip">×</button><button class="clip-trim-left" title="Drag left edge to trim clip start" aria-label="Trim clip start"></button><button class="clip-resize-handle" title="Drag right edge to trim clip end" aria-label="Trim clip end"></button>`;
             element.querySelector('.clip-name').textContent = clip.name;
-            element.querySelector('.clip-info').textContent = `${clipLengthLabel(clip.length)}  ·  MIDI`;
+            element.querySelector('.clip-info').textContent = `${clipLengthLabel(clip.length)}  ·  ${track.type==='audio'?'AUDIO':track.type==='drums'?'DRUMS':'MIDI'}`;
             element.title = `${clip.name} · ${clipLengthLabel(clip.length)}`;
             element.addEventListener('pointerdown', event => {
               if (arrangeTool !== 'select' || event.button !== 0 || event.target.closest('.clip-delete')) return;
-              const mode = event.target.closest('.clip-resize-handle') ? 'resize' : 'move';
+              const mode = event.target.closest('.clip-resize-handle') ? 'resize-right' : event.target.closest('.clip-trim-left') ? 'resize-left' : 'move';
               const before = JSON.stringify(project);
               const rect = gridEl.getBoundingClientRect();
               project.selectedTrack = track.id; project.selectedClip = clip.id; audio.selectedNote = null; editFocus = 'clips'; editorTab = track.type === 'drums' ? 'drums' : 'piano';
               document.querySelectorAll('.clip.selected').forEach(selected => selected.classList.remove('selected'));
               element.classList.add('selected', mode === 'move' ? 'dragging' : 'resizing'); renderTracks(); renderEditor(); updateStatus(); updateDuplicateButton();
-              arrangeDrag = { clip, element, mode, sourceTrack:track, targetTrack:track, duplicate:event.altKey && mode==='move', startX:event.clientX, startY:event.clientY, startBeat:clip.start, startLength:clip.length, timelineBeats:visibleBeats, gridWidth:rect.width, moved:false, before };
+              arrangeDrag = { clip, element, mode, sourceTrack:track, targetTrack:track, duplicate:event.altKey && mode==='move', startX:event.clientX, startY:event.clientY, startBeat:clip.start, startLength:clip.length, startOffset:clip.offset||0, timelineBeats:visibleBeats, gridWidth:rect.width, moved:false, before };
             });
             element.addEventListener('click', event => {
               if (suppressClipClick) { suppressClipClick = false; event.preventDefault(); return; }
@@ -1329,9 +1331,16 @@
           drag.element=original.cloneNode(true);drag.element.dataset.clipId=drag.clip.id;drag.element.querySelector('.clip-name').textContent=drag.clip.name;original.parentElement.appendChild(drag.element);drag.element.classList.add('dragging');drag.copied=true;
         }
         const snap=Number($('#snapSelect').value),deltaBeat=deltaX/drag.gridWidth*drag.timelineBeats;
-        if(drag.mode==='resize'){
-          const quantum=snap||.25;drag.clip.length=clamp(Math.round((drag.startLength+deltaBeat)/quantum)*quantum,quantum,drag.timelineBeats+32-drag.clip.start);
-          drag.element.style.setProperty('--clip-width',`${drag.clip.length/drag.timelineBeats*100}%`);drag.element.querySelector('.clip-info').textContent=`${clipLengthLabel(drag.clip.length)} · MIDI`;
+        if(drag.mode==='resize-right'){
+          const quantum=snap||.25,sourceLimit=drag.sourceTrack.type==='audio'&&drag.clip.sourceDuration?Math.max(quantum,(drag.clip.sourceDuration-(drag.clip.offset||0))*project.tempo/60):Infinity,maxLength=Math.min(drag.timelineBeats+32-drag.clip.start,sourceLimit);
+          drag.clip.length=clamp(Math.round((drag.startLength+deltaBeat)/quantum)*quantum,quantum,maxLength);
+          drag.element.style.setProperty('--clip-width',`${drag.clip.length/drag.timelineBeats*100}%`);drag.element.querySelector('.clip-info').textContent=`${clipLengthLabel(drag.clip.length)} · ${drag.sourceTrack.type==='audio'?'AUDIO':drag.sourceTrack.type==='drums'?'DRUMS':'MIDI'}`;
+        }else if(drag.mode==='resize-left'){
+          const quantum=snap||.25,end=drag.startBeat+drag.startLength,audioLimit=drag.sourceTrack.type==='audio'?drag.startBeat-drag.startOffset*project.tempo/60:0;
+          const nextStart=clamp(Math.round((drag.startBeat+deltaBeat)/quantum)*quantum,audioLimit,end-quantum);
+          drag.clip.start=nextStart;drag.clip.length=end-nextStart;
+          if(drag.sourceTrack.type==='audio')drag.clip.offset=Math.max(0,drag.startOffset+(nextStart-drag.startBeat)*60/project.tempo);
+          drag.element.style.setProperty('--clip-left',`${drag.clip.start/drag.timelineBeats*100}%`);drag.element.style.setProperty('--clip-width',`${drag.clip.length/drag.timelineBeats*100}%`);drag.element.querySelector('.clip-info').textContent=`${clipLengthLabel(drag.clip.length)} · ${drag.sourceTrack.type==='audio'?'AUDIO':drag.sourceTrack.type==='drums'?'DRUMS':'MIDI'}`;
         }else{
           const position=drag.startBeat+deltaBeat,maxStart=drag.timelineBeats+32-drag.clip.length;
           drag.clip.start=clamp(snap?Math.round(position/snap)*snap:Math.round(position*1000)/1000,0,maxStart);
@@ -1348,6 +1357,8 @@
         const drag=arrangeDrag;if(!drag)return;arrangeDrag=null;
         drag.element.classList.remove('dragging','resizing');gridEl.querySelectorAll('.drop-target').forEach(l=>l.classList.remove('drop-target'));
         if(drag.moved){
+          if(drag.mode==='resize-left'&&drag.sourceTrack.type==='drums')drag.clip.steps=rotateClipSteps(stepsForClip(drag.sourceTrack,drag.clip),(drag.clip.start-drag.startBeat)*4);
+          else if(drag.mode==='resize-left'&&drag.sourceTrack.type!=='audio')drag.clip.notes=rotateClipNotes(notesForClip(drag.sourceTrack,drag.clip),drag.clip.start-drag.startBeat,16);
           if(drag.targetTrack!==drag.sourceTrack){drag.sourceTrack.clips=drag.sourceTrack.clips.filter(c=>c!==drag.clip);drag.targetTrack.clips.push(drag.clip);}
           project.selectedTrack=drag.targetTrack.id;project.selectedClip=drag.clip.id;editFocus='clips';
           suppressClipClick=true;renderTracks();renderArrangement();renderEditor();pushUndoSnapshot(drag.before);setDirty();
@@ -1357,13 +1368,33 @@
       document.addEventListener('pointercancel',()=>{
         const drag=arrangeDrag;if(!drag)return;arrangeDrag=null;
         if(drag.copied)drag.sourceTrack.clips=drag.sourceTrack.clips.filter(c=>c!==drag.clip);
-        else{drag.clip.start=drag.startBeat;drag.clip.length=drag.startLength;}
+        else{drag.clip.start=drag.startBeat;drag.clip.length=drag.startLength;if(drag.sourceTrack.type==='audio')drag.clip.offset=drag.startOffset;}
         renderArrangement();
       });
       function nextClipId(track) {
         let id = `${track.id}-clip-${Date.now()}`, suffix = 1;
         while ((track.clips || []).some(clip => clip.id === id)) id = `${track.id}-clip-${Date.now()}-${suffix++}`;
         return id;
+      }
+      function rotateClipNotes(notes, shift, period=16) {
+        const phase=((shift%period)+period)%period;if(phase<.0001)return notes.map(note=>({...note}));
+        return notes.flatMap(note=>{const start=Number(note.start)||0,duration=Math.max(.01,Number(note.duration)||.25),rotated=[];if(start>=phase)rotated.push({...note,start:start-phase});else{if(start+duration>phase)rotated.push({...note,start:0,duration:start+duration-phase});rotated.push({...note,start:period+start-phase});}return rotated;});
+      }
+      function rotateClipSteps(steps, shift) {
+        const phase=((Math.round(shift)%16)+16)%16,result=emptyDrumSteps();
+        DRUM_LANES.forEach(kind=>{result[kind]=[...(steps[kind]||[])].map(step=>((step-phase+16)%16)).sort((a,b)=>a-b);});return result;
+      }
+      function splitSelectedClip() {
+        const track=project.tracks.find(item=>(item.clips||[]).some(clip=>clip.id===project.selectedClip)),clip=track?.clips?.find(item=>item.id===project.selectedClip);
+        if(!track||!clip){notify('Select a clip to split');return;}
+        if(track.type==='audio'){studioSplitAudio();return;}
+        const snap=Number($('#snapSelect').value)||.25,quantum=track.type==='drums'?Math.max(.25,snap):snap,relative=Math.round((audio.playheadBeat-clip.start)/quantum)*quantum,cut=clip.start+relative;
+        if(relative<quantum||relative>clip.length-quantum){notify('Move the playhead inside the selected clip to split it');return;}
+        const before=JSON.stringify(project),oldLength=clip.length,right={...clone(clip),id:nextClipId(track),name:`${clip.name} B`,start:cut,length:oldLength-relative};
+        if(track.type==='drums')right.steps=rotateClipSteps(stepsForClip(track,clip),(relative%4)*4);
+        else{const source=clone(notesForClip(track,clip));clip.notes=source;right.notes=rotateClipNotes(source,relative%16,16);}
+        clip.length=relative;track.clips.push(right);project.selectedClip=right.id;project.selectedTrack=track.id;editFocus='clips';
+        renderTracks();renderArrangement();renderEditor();pushUndoSnapshot(before);setDirty();notify('Clip split at playhead');
       }
       function makeEmptyClip(track, start, length = 16, name) {
         const clip = { id: nextClipId(track), name: name || (track.type === 'drums' ? 'New groove' : 'New pattern'), start, length };
@@ -1960,7 +1991,7 @@
               for (let offset = 0; offset < clip.length; offset += 16) {
                 for (const [index, note] of notesForClip(track, clip).entries()) {
                   const beat = clip.start + offset + note.start;
-                  if (beat < clip.start + clip.length) events.push({ id: `${track.id}:${clip.id}:${offset}:${index}`, beat, track, note, duration: note.duration * 60 / project.tempo });
+                  if (beat < clip.start + clip.length) events.push({ id: `${track.id}:${clip.id}:${offset}:${index}`, beat, track, note, duration: Math.min(note.duration,clip.start+clip.length-beat) * 60 / project.tempo });
                 }
               }
             }
@@ -2064,7 +2095,7 @@
               }
             } else for (let offset=0; offset<clip.length; offset+=16) for (const note of notesForClip(track, clip)) {
               const start = clip.start + offset + note.start; if (start >= clip.start + clip.length) continue;
-              const tick = Math.round(start * 480), end = tick + Math.max(60, Math.round(note.duration * 480));
+              const tick = Math.round(start * 480), end = tick + Math.max(1, Math.round(Math.min(note.duration,clip.start+clip.length-start) * 480));
               events.push({tick, data:[0x90, note.pitch, Math.round(120*(note.velocity||.75))], priority:1}, {tick:end, data:[0x80,note.pitch,0], priority:0});
             }
           }
@@ -2451,7 +2482,7 @@
       }
       function setupWorkflow() {
         const tools=$('.arrange-tools');
-        for(const [id,label,title,action] of [['renameClipButton','Rename','Rename selected clip (F2)',()=>{const clip=selectedClipFor();if(clip)openRename(clip,'clip');}],['pasteClipButton','Paste clip','Paste copied clip at the playhead (Ctrl+V)',()=>pasteSelection(true)]]){const button=document.createElement('button');button.id=id;button.className='text-button';button.textContent=label;button.title=title;button.addEventListener('click',action);tools.insertBefore(button,$('#duplicateClipButton'));}
+        for(const [id,label,title,action] of [['renameClipButton','Rename','Rename selected clip (F2)',()=>{const clip=selectedClipFor();if(clip)openRename(clip,'clip');}],['pasteClipButton','Paste clip','Paste copied clip at the playhead (Ctrl+V)',()=>pasteSelection(true)],['splitClipButton','Split','Split the selected clip at the playhead',splitSelectedClip]]){const button=document.createElement('button');button.id=id;button.className='text-button';button.textContent=label;button.title=title;button.addEventListener('click',action);tools.insertBefore(button,$('#duplicateClipButton'));}
         $('#openProjectButton').addEventListener('click',()=>$('#projectFileInput').click());$('#downloadProjectButton').addEventListener('click',downloadProject);$('#projectFileInput').addEventListener('change',event=>openProjectFile(event.target.files[0]));
         $('#renameForm').addEventListener('submit',event=>{event.preventDefault();const name=$('#renameInput').value.trim();if(!name||!renameTarget)return;const before=JSON.stringify(project);renameTarget.object.name=name;$('#renameDialog').close();renderTracks();renderArrangement();renderEditor();pushUndoSnapshot(before);setDirty();});
         $('#cancelRenameButton').addEventListener('click',()=>$('#renameDialog').close());

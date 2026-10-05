@@ -111,6 +111,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visi
 .clip-wave { height:15px; bottom:7px; opacity:.7; }
 .clip-delete { background:#0002; color:#d6d0dd; border:0; border-radius:4px; width:17px; height:17px; top:5px; right:6px; }
 .clip-resize-handle { opacity:.3; }
+.clip-trim-left { opacity:.35; }
+.clip:hover .clip-trim-left, .clip.selected .clip-trim-left { opacity:.9; }
 .playhead { background:#e8e6d8; box-shadow:none; width:1px; }
 .studio-inspector { background:#1a1b1f; padding:20px 17px; border-color:var(--line); }
 .inspector-overline { font-size:11px; letter-spacing:0; font-weight:500; color:#85838f; margin-bottom:15px; }
