@@ -8,8 +8,8 @@ function replace(find, value) {
   if (!html.includes(find)) throw new Error('Missing build anchor: ' + find.slice(0,100));
   html = html.replace(find, value);
 }
-replace('  </style>', ['sonora-studio.css','sonora-pro.css','sonora-piano.css','sonora-design.css'].map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n') + '\n  </style>');
-replace('      setupWorkflow();', ['sonora-studio.js','sonora-pro.js','sonora-piano.js','sonora-design.js'].map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n') + '\n      setupWorkflow();');
+replace('  </style>', ['sonora-studio.css','sonora-pro.css','sonora-piano.css','sonora-design.css','sonora-session.css'].map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n') + '\n  </style>');
+replace('      setupWorkflow();', ['sonora-studio.js','sonora-pro.js','sonora-piano.js','sonora-design.js','sonora-session.js'].map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n') + '\n      setupWorkflow();');
 replace("type:source.type==='drums'?'drums':'synth'", "type:source.type==='audio'?'audio':source.type==='drums'?'drums':'synth'");
 replace("if(track.type==='drums'){\n              const steps=entry.steps", "if(track.type==='audio'){\n              clip.notes=[];\n            }else if(track.type==='drums'){\n              const steps=entry.steps");
 replace('new Set(snapshot.tracks.map(track=>track.sampleId).filter(Boolean))', 'studioSampleIds(snapshot)');

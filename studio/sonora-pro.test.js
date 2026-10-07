@@ -17,6 +17,7 @@
   const labels=[...document.querySelectorAll('.piano-label')],row=labels.findIndex(l=>l.textContent==='D♯4');
   check(row>=0,'editable pitch range includes D sharp');
   pointer(roll,'pointerdown',r.left+r.width*.23,r.top+row*20+10);
+  pointer(roll,'pointerup',r.left+r.width*.23,r.top+row*20+10);
   let p=save(),newNote=p.tracks[0].clips[0].notes.at(-1);
   check(newNote.pitch===62,'scale lock snaps an out-of-scale D sharp to D');
   let note=q('.note[data-index="12"]');r=note.getBoundingClientRect();pointer(note,'pointerdown',r.left+4,r.top+5);pointer(roll,'pointermove',r.left+4+roll.getBoundingClientRect().width/16*.5,r.top-35);pointer(roll,'pointerup',r.left+4,r.top-35);

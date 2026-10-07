@@ -1,12 +1,13 @@
 {
   "name": "sonora",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "private": true,
   "description": "A creative music studio in your browser, with a dedicated Sonora introduction site.",
   "scripts": {
     "build": "node scripts/build.cjs",
     "dev": "node scripts/serve.cjs",
-    "check": "node scripts/check.cjs"
+    "check": "node scripts/check.cjs",
+    "test": "node scripts/test.cjs"
   },
   "engines": { "node": "24.x" }
 }

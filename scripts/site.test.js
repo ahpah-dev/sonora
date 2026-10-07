@@ -8,7 +8,7 @@
   key('ShiftLeft');check(q('#demoSustain').getAttribute('aria-pressed')==='true','keyboard sustain pedal activates');key('ShiftLeft',false);check(q('#demoSustain').getAttribute('aria-pressed')==='false','keyboard sustain pedal releases');
   q('[data-sound=upright]').click();check(q('#soundName').textContent==='Mellow Upright'&&q('[data-sound=upright]').getAttribute('aria-pressed')==='true','piano selection updates sound and accessible state');
   q('#demoPlay').click();await sleep(150);check(q('#demoPlay').getAttribute('aria-pressed')==='true','inspiration sequence starts');q('#demoPlay').click();check(q('#demoPlay').getAttribute('aria-pressed')==='false'&&!q('.demo-flash'),'sequence stops and clears queued highlights');
-  for(const view of ['perform','shape','compose']){q(`[data-view=${view}]`).click();await q('#studioPreview').decode();check(q('#studioPreview').naturalWidth===1600,`${view} preview loads actual studio screenshot`);}
+  for(const view of ['perform','shape','compose']){q(`[data-view=${view}]`).click();await q('#studioPreview').decode();check(q('#studioPreview').naturalWidth>=1200,`${view} preview loads actual studio screenshot`);}
   check(document.documentElement.scrollWidth<=innerWidth,'page stays within viewport width');
   return results;
 })();

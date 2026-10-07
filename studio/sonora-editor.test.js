@@ -1,0 +1,49 @@
+// Run in a disposable browser session. The verification harness executes this
+// expression after its Run button is clicked, and restores the session afterward.
+(async()=>{
+  const q=s=>document.querySelector(s),results=[],sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const check=(ok,label)=>{if(!ok)throw Error(label);results.push('PASS '+label);};
+  const clickText=(selector,text)=>{const button=[...document.querySelectorAll(selector)].find(b=>b.textContent.trim()===text);if(!button)throw Error('Missing '+text);button.click();};
+  const save=()=>{q('#saveButton').click();return JSON.parse(localStorage.getItem('sonora-daw-project-v1'));};
+  const notes=()=>save().tracks.find(t=>t.id===save().selectedTrack).clips.find(c=>c.id===save().selectedClip).notes;
+  const change=(selector,value)=>{const el=q(selector);el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}));};
+  const pointer=(el,type,x,y,extra={})=>el.dispatchEvent(new PointerEvent(type,{clientX:x,clientY:y,pointerId:79,button:0,bubbles:true,...extra}));
+  const prepare=()=>{const roll=q('#pianoRoll');roll.setPointerCapture=()=>{};return roll;};
+  const point=(beat,pitch)=>{const r=q('#pianoRoll').getBoundingClientRect(),row=Number.parseFloat(getComputedStyle(q('.piano-editor')).getPropertyValue('--row-height'));return{x:r.left+beat/16*r.width,y:r.top+(127-pitch)*row+row/2,row,width:r.width};};
+  q('#stopButton').click();clickText('#designProjectMenu button','New project');q('#addClipButton').click();
+  change('#snapSelect','0.25');change('select[aria-label="Scale guide"]','off');
+  check(document.querySelectorAll('.piano-label').length===128,'all 128 MIDI pitches have keyboard labels');
+  check(q('.piano-label').textContent==='G9'&&[...document.querySelectorAll('.piano-label')].at(-1).textContent==='C-1','piano range reaches MIDI 127 and MIDI 0');
+  check(document.querySelectorAll('.pro-pitch-row').length===128,'full-range grid uses only 128 stripe rows');
+  let workspace=q('.piano-workspace');workspace.scrollTop=workspace.scrollHeight;workspace.dispatchEvent(new Event('scroll'));await sleep(20);
+  check(workspace.scrollTop>1000,'low pitches are accessible through ordinary vertical scrolling');
+  let roll=prepare(),p=point(1.03,4),end=point(2.68,4);
+  pointer(roll,'pointerdown',p.x,p.y);pointer(roll,'pointermove',end.x,end.y);pointer(roll,'pointerup',end.x,end.y);
+  let list=notes();check(list.length===1&&list[0].pitch===4&&list[0].start===1&&Math.abs(list[0].duration-1.75)<.001,'draw and drag writes a low-pitch note with snapped length: '+JSON.stringify(list));
+  let note=q('.note[data-index="0"]'),handle=note.querySelector('.note-handle-left'),r=handle.getBoundingClientRect(),width=q('#pianoRoll').getBoundingClientRect().width;
+  pointer(handle,'pointerdown',r.left+2,r.top+5);pointer(roll,'pointermove',r.left+2+width/16*.5,r.top+5);pointer(roll,'pointerup',r.left+2+width/16*.5,r.top+5);
+  list=notes();check(Math.abs(list[0].start-1.5)<.001&&Math.abs(list[0].duration-1.25)<.001,'left note edge trims start while preserving the note end');
+  note=q('.note[data-index="0"]');r=note.getBoundingClientRect();p=point(2,4);
+  pointer(note,'pointerdown',p.x,p.y,{altKey:true});pointer(roll,'pointermove',p.x+width/16,p.y-40,{altKey:true});pointer(roll,'pointerup',p.x+width/16,p.y-40,{altKey:true});
+  list=notes();check(list.length===2&&list[0].start===1.5&&list[0].pitch===4&&list[1].start===2.5&&list[1].pitch===6,'Alt drag copies notes without moving the original');
+  q('#undoButton').click();check(notes().length===1,'Alt copy is a single undoable edit');q('#redoButton').click();check(notes().length===2,'redo restores Alt copy');
+  roll=prepare();note=q('.note[data-index="1"]');r=note.getBoundingClientRect();p={x:r.left+r.width/2,y:r.top+r.height/2};width=roll.getBoundingClientRect().width;
+  const before=JSON.stringify(notes());pointer(note,'pointerdown',p.x,p.y);pointer(roll,'pointermove',p.x+width/16,p.y-20);pointer(roll,'pointercancel',p.x+width/16,p.y-20);
+  check(JSON.stringify(notes())===before,'pointer cancellation restores note timing and pitch');
+  note=q('.note[data-index="1"]');r=note.getBoundingClientRect();p={x:r.left+r.width/2,y:r.top+r.height/2};pointer(note,'pointerdown',p.x,p.y,{altKey:true});pointer(roll,'pointermove',p.x+width/16,p.y-20,{altKey:true});roll.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  check(JSON.stringify(notes())===before,'Escape removes an uncommitted Alt copy');
+  workspace=q('.piano-workspace');workspace.scrollTop=0;workspace.dispatchEvent(new Event('scroll'));roll=prepare();p=point(4,125);pointer(roll,'pointerdown',p.x,p.y);pointer(roll,'pointercancel',p.x,p.y);
+  check(notes().length===2,'cancelled drawing leaves no new note');
+  pointer(roll,'pointerdown',p.x,p.y);pointer(roll,'pointerup',p.x,p.y);check(notes().at(-1).pitch===125,'high MIDI pitches can be drawn directly');
+  const oldHeight=q('.pro-roll-content').getBoundingClientRect().height;change('#proPitchZoom',16);
+  check(q('.pro-roll-content').getBoundingClientRect().height===2048&&oldHeight>2048,'pitch size changes the physical grid row height');
+  const oldWidth=q('#pianoRoll').getBoundingClientRect().width;q('#proRollZoom').click();check(q('#pianoRoll').getBoundingClientRect().width>oldWidth*1.9,'time zoom enlarges the editable grid');
+  roll=prepare();roll.focus();const lastPitch=notes().at(-1).pitch;roll.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+  check(notes().at(-1).pitch===lastPitch-1&&document.activeElement===roll,'keyboard note nudging preserves editor focus');
+  const beforeLength=notes().at(-1).duration;roll.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',altKey:true,bubbles:true}));
+  check(Math.abs(notes().at(-1).duration-beforeLength-.25)<.001,'Alt arrow resizes selected notes by the snap amount');
+  const grip=q('.pro-roll-playhead-grip');grip.dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true}));grip.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}));
+  check(grip.getAttribute('aria-valuenow')==='0','piano playhead keyboard seeking stays inside the pattern');
+  check(q('.pro-roll-readout').textContent.includes('velocity'),'editor status reports selected pitch timing and velocity');
+  q('#stopButton').click();return results;
+})()

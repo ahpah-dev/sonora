@@ -1,0 +1,15 @@
+      .session-toolbar{display:flex;align-items:center;gap:6px}
+      #sessionLoopMenu .design-menu-body{min-width:230px;padding:14px;gap:8px}
+      #sessionLoopLabel{display:block;color:var(--mint);font-size:12px;margin-bottom:8px;font-variant-numeric:tabular-nums}
+      #sessionLoopStrip{position:absolute;bottom:0;height:3px;background:var(--mint);opacity:.75;pointer-events:none}
+      #sessionLoopStrip[hidden]{display:none}.session-dialog{width:min(620px,calc(100vw - 32px));max-height:85vh;overflow:auto;padding:30px}
+      .session-dialog h3{font-size:13px;margin:26px 0 12px}.session-dialog p{line-height:1.65}
+      .session-templates{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0}
+      .session-templates button{display:flex;align-items:flex-start;flex-direction:column;text-align:left;height:auto;min-height:108px;padding:18px;gap:10px;white-space:normal;background:var(--panel-2,#24282d);border:1px solid var(--border,#363c42)}
+      .session-templates button:hover{border-color:var(--mint)}.session-templates strong{font-size:14px}.session-templates span{font-size:12px;color:var(--muted);line-height:1.5;font-weight:400}
+      #sessionRecoveryList{display:flex;flex-direction:column;gap:7px}#sessionRecoveryList button{height:auto;min-height:34px;white-space:normal;text-align:left;justify-content:flex-start;font-size:12px}
+      .session-guide{border-top:1px solid var(--border,#363c42);margin-top:24px}.session-guide p{font-size:12px;color:var(--muted)}
+      .session-export-fields{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:24px 0}.session-export-fields label{display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--muted)}
+      .session-export-fields select{width:100%;height:38px}.session-normalize{display:flex;gap:10px;align-items:center;font-size:13px;margin:20px 0}.session-normalize input{accent-color:var(--mint)}
+      #sessionExportStatus{font-size:12px;color:var(--mint);min-height:24px;margin-top:16px}.session-dialog .dialog-close{right:18px;top:18px}
+      @media(max-width:900px){.session-toolbar button,#sessionLoopMenu summary{font-size:11px;padding:6px 9px}}

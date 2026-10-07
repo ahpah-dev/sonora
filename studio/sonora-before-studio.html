@@ -941,7 +941,7 @@
           if (cut) deleteSelectedNotes(); notify(cut ? 'Notes cut' : 'Notes copied');
         } else {
           const track = getTrack(), clip = selectedClipFor(track); if (!clip) return;
-          clipboard = {type:'clip', trackType:track.type === 'drums' ? 'drums' : 'synth', clip:clone(clip)};
+          clipboard = {type:'clip', trackType:track.type, clip:clone(clip)};
           if (cut) deleteClip(track.id,clip.id); notify(cut ? 'Clip cut' : 'Clip copied');
         }
       }
@@ -950,14 +950,14 @@
         const track = getTrack(), before = JSON.stringify(project);
         if (clipboard.type === 'notes' && !forceClip) {
           const clip = selectedClipFor(track);
-          if (!clip || track.type === 'drums') { notify('Select an instrument clip to paste notes'); return; }
+          if (!clip || track.type !== 'synth') { notify('Select an instrument clip to paste notes'); return; }
           const length = Math.max(...clipboard.notes.map(n=>n.start+n.duration));
           const origin = clamp(pianoCursor,0,Math.max(0,16-length));
           const notes = notesForClip(track,clip); selectedNotes.clear();
           clipboard.notes.forEach(note => { const copy={...clone(note),start:origin+note.start}; notes.push(copy); selectedNotes.add(copy); });
           audio.selectedNote = selectedNoteList()[0]; editFocus='notes'; editorTab='piano'; renderEditor(); refreshClipPreviews(track);
         } else if (clipboard.type === 'clip') {
-          if ((track.type === 'drums' ? 'drums' : 'synth') !== clipboard.trackType) { notify('Paste drum clips onto drum tracks and note clips onto instrument tracks'); return; }
+          if (track.type !== clipboard.trackType) { notify('Paste the clip onto the same type of track'); return; }
           const snap = Number($('#snapSelect').value);
           const start = Math.max(0,snap ? Math.round(audio.playheadBeat/snap)*snap : audio.playheadBeat);
           const copy={...clone(clipboard.clip),id:nextClipId(track),start,name:`${clipboard.clip.name} copy`};
@@ -1203,6 +1203,7 @@
         }
         const base = pianoBase(track), notes = [];
         for (let offset = 0; offset < clip.length; offset += 16) for (const note of notesForClip(track, clip)) {
+          if(note.firstPassOnly&&offset>0)continue;
           const beat = offset + note.start;
           if (beat >= clip.length) continue;
           const pitch = clamp(note.pitch - base, 0, 23);
@@ -1264,7 +1265,7 @@
             });
             element.addEventListener('contextmenu', event => {
               event.preventDefault();event.stopPropagation();project.selectedTrack=track.id;project.selectedClip=clip.id;editFocus='clips';renderTracks();renderArrangement();renderEditor();
-              showContextMenu(event.clientX,event.clientY,[['Copy clip',()=>copySelection()],['Duplicate clip',duplicateSelectedClip],['Rename clip',()=>openRename(clip,'clip')],['Delete clip',()=>deleteClip(track.id,clip.id)]]);
+              showContextMenu(event.clientX,event.clientY,[['Copy clip',()=>copySelection()],['Split at playhead',splitSelectedClip],['Loop this clip',()=>sessionLoopClip(clip)],['Duplicate clip',duplicateSelectedClip],['Rename clip',()=>openRename(clip,'clip')],['Delete clip',()=>deleteClip(track.id,clip.id)]]);
             });
             element.querySelector('.clip-delete').addEventListener('click', event => {
               event.stopPropagation();
@@ -1336,7 +1337,7 @@
           drag.clip.length=clamp(Math.round((drag.startLength+deltaBeat)/quantum)*quantum,quantum,maxLength);
           drag.element.style.setProperty('--clip-width',`${drag.clip.length/drag.timelineBeats*100}%`);drag.element.querySelector('.clip-info').textContent=`${clipLengthLabel(drag.clip.length)} · ${drag.sourceTrack.type==='audio'?'AUDIO':drag.sourceTrack.type==='drums'?'DRUMS':'MIDI'}`;
         }else if(drag.mode==='resize-left'){
-          const quantum=snap||.25,end=drag.startBeat+drag.startLength,audioLimit=drag.sourceTrack.type==='audio'?drag.startBeat-drag.startOffset*project.tempo/60:0;
+          const quantum=drag.sourceTrack.type==='drums'?Math.max(.25,snap||.25):snap||.25,end=drag.startBeat+drag.startLength,audioLimit=drag.sourceTrack.type==='audio'?Math.max(0,drag.startBeat-drag.startOffset*project.tempo/60):0;
           const nextStart=clamp(Math.round((drag.startBeat+deltaBeat)/quantum)*quantum,audioLimit,end-quantum);
           drag.clip.start=nextStart;drag.clip.length=end-nextStart;
           if(drag.sourceTrack.type==='audio')drag.clip.offset=Math.max(0,drag.startOffset+(nextStart-drag.startBeat)*60/project.tempo);
@@ -1347,7 +1348,7 @@
           drag.element.style.setProperty('--clip-left',`${drag.clip.start/drag.timelineBeats*100}%`);
           const lanes=[...gridEl.querySelectorAll('.arrange-lane')],targetLane=lanes.find(lane=>{const r=lane.getBoundingClientRect();return event.clientY>=r.top&&event.clientY<r.bottom;});
           const target=targetLane&&project.tracks.find(t=>t.id===targetLane.dataset.track);
-          drag.targetTrack=target&&((target.type==='drums')===(drag.sourceTrack.type==='drums'))?target:drag.sourceTrack;
+          drag.targetTrack=target&&target.type===drag.sourceTrack.type?target:drag.sourceTrack;
           lanes.forEach(lane=>lane.classList.toggle('drop-target',lane.dataset.track===drag.targetTrack.id));
           const destination=lanes.find(l=>l.dataset.track===drag.targetTrack.id),source=lanes.find(l=>l.dataset.track===drag.sourceTrack.id);
           drag.element.style.top=`${destination.offsetTop-source.offsetTop}px`;
@@ -1378,7 +1379,7 @@
       }
       function rotateClipNotes(notes, shift, period=16) {
         const phase=((shift%period)+period)%period;if(phase<.0001)return notes.map(note=>({...note}));
-        return notes.flatMap(note=>{const start=Number(note.start)||0,duration=Math.max(.01,Number(note.duration)||.25),rotated=[];if(start>=phase)rotated.push({...note,start:start-phase});else{if(start+duration>phase)rotated.push({...note,start:0,duration:start+duration-phase});rotated.push({...note,start:period+start-phase});}return rotated;});
+        return notes.flatMap(note=>{const start=Number(note.start)||0,duration=Math.max(.01,Number(note.duration)||.25),rotated=[];if(start>=phase)rotated.push({...note,start:start-phase});else{if(start+duration>phase)rotated.push({...note,start:0,duration:start+duration-phase,firstPassOnly:true});if(!note.firstPassOnly)rotated.push({...note,start:period+start-phase});}return rotated;});
       }
       function rotateClipSteps(steps, shift) {
         const phase=((Math.round(shift)%16)+16)%16,result=emptyDrumSteps();
@@ -1902,8 +1903,9 @@
         audio.scheduled.add(`${cycle}:${track.id}:${clip.id}:${offset}:${suffix}`);
       }
       function recordDrumInput(track,kind,timing=liveInputTiming()){
-        const clip=selectedClipFor(track);if(!audio.record||!audio.playing)return;
+        const clip=selectedClipFor(track);if(!audio.record||!audio.playing||audio.context.currentTime<audio.startTime)return;
         if(!clip){notify('Add a drum clip before recording MIDI');return;}
+        if(timing.beat<clip.start||timing.beat>=clip.start+clip.length)return;
         const relative=timing.beat-clip.start,step=Math.floor(((relative%4+4)%4)*4)%16,steps=stepsForClip(track,clip);
         if(!steps[kind].includes(step)){beginLiveRecording();steps[kind].push(step);markLiveRecordedEvent(track,clip,`${kind}:${step}`,timing,4);queueLiveRecordingUI(track);finishLiveRecording();setDirty();}
       }
@@ -1916,7 +1918,7 @@
         const play=()=>{if(!audio.context||active.releaseRequested)return;active.release=startHeldNote(track,note,note.velocity,audio.context.currentTime);};
         if(audio.context?.state==='running'&&(!track.sampleId||importedInstrumentBuffers.has(track.sampleId)))play();
         else audioReady().then(async()=>{if(track.sampleId&&!importedInstrumentBuffers.has(track.sampleId))await ensureImportedInstrument(track);play();}).catch(()=>{});
-        if(audio.record&&audio.playing){if(!clip)notify('Add a clip to record MIDI notes');else{const snap=Number($('#snapSelect').value),relative=timing.beat-clip.start,position=(relative%clip.length+clip.length)%clip.length,start=snap?Math.round(position/snap)*snap:position;note.start=clamp(start,0,Math.max(0,clip.length-.0625));note.duration=Math.max(.0625,Math.min(note.duration,clip.length-note.start));beginLiveRecording();const notes=notesForClip(track,clip);notes.push(note);markLiveRecordedEvent(track,clip,notes.length-1,timing);selectedNotes.clear();selectedNotes.add(note);audio.selectedNote=note;active.recorded=true;queueLiveRecordingUI(track);setDirty();}}
+        if(audio.record&&audio.playing&&audio.context.currentTime>=audio.startTime){if(!clip)notify('Add a clip to record MIDI notes');else if(timing.beat>=clip.start&&timing.beat<clip.start+clip.length){const snap=Number($('#snapSelect').value),relative=timing.beat-clip.start,position=(relative%clip.length+clip.length)%clip.length,start=snap?Math.round(position/snap)*snap:position;note.start=clamp(start,0,Math.max(0,clip.length-.0625));note.duration=Math.max(.0625,Math.min(note.duration,clip.length-note.start));beginLiveRecording();const notes=notesForClip(track,clip);notes.push(note);markLiveRecordedEvent(track,clip,notes.length-1,timing);selectedNotes.clear();selectedNotes.add(note);audio.selectedNote=note;active.recorded=true;queueLiveRecordingUI(track);setDirty();}}
         syncKeyboardHighlights();editFocus='notes';
       }
       function liveNoteUp(source,timestamp){
@@ -1990,6 +1992,7 @@
             } else {
               for (let offset = 0; offset < clip.length; offset += 16) {
                 for (const [index, note] of notesForClip(track, clip).entries()) {
+                  if(note.firstPassOnly&&offset>0)continue;
                   const beat = clip.start + offset + note.start;
                   if (beat < clip.start + clip.length) events.push({ id: `${track.id}:${clip.id}:${offset}:${index}`, beat, track, note, duration: Math.min(note.duration,clip.start+clip.length-beat) * 60 / project.tempo });
                 }
@@ -2050,9 +2053,11 @@
         if (position !== audio.lastDisplay) { $('#positionDisplay').textContent = position; audio.lastDisplay = position; }
       }
       async function startPlayback() {
+        const playbackRequest=audio.startRequest;
         await audioReady();
         if (!audio.context) return;
         await loadProjectInstruments();
+        if(playbackRequest!==audio.startRequest)return;
         liveInputClock=null;
         audio.playing = true; audio.scheduled.clear(); audio.metronomeBeat = -1;
         const countInBeats = project.countIn ? 4 : 0, secondsPerBeat = 60 / project.tempo;
@@ -2094,6 +2099,7 @@
                 events.push({ tick, data: [0x99, note, 96], priority: 1 }, { tick: tick+90, data: [0x89,note,0], priority: 0 });
               }
             } else for (let offset=0; offset<clip.length; offset+=16) for (const note of notesForClip(track, clip)) {
+              if(note.firstPassOnly&&offset>0)continue;
               const start = clip.start + offset + note.start; if (start >= clip.start + clip.length) continue;
               const tick = Math.round(start * 480), end = tick + Math.max(1, Math.round(Math.min(note.duration,clip.start+clip.length-start) * 480));
               events.push({tick, data:[0x90, note.pitch, Math.round(120*(note.velocity||.75))], priority:1}, {tick:end, data:[0x80,note.pitch,0], priority:0});
@@ -2383,7 +2389,7 @@
         while (project.tracks.some(track => track.id === `keys-${number}`)) number++;
         const id = `keys-${number}`;
         const before = JSON.stringify(project);
-        const track = { id, name: `Keys ${number}`, instrument: 'Glass Keys', type: 'synth', color: COLORS.keys, volume: .7, mute: false, solo: false, waveform: 'triangle', synth: clone(SYNTH_PRESETS[0].synth), effects: [], clips: [{ id: `${id}-clip-1`, name: 'New pattern', start: 0, length: 16, notes: [] }], notes: [] };
+        const track = { id, name: `Keys ${number}`, instrument: 'Glass Keys', type: 'synth', color: COLORS.keys, volume: .7, mute: false, solo: false, waveform: 'triangle', synth: clone(SYNTH_PRESETS.find(p=>p.name==='Glass Keys').synth), effects: [], clips: [{ id: `${id}-clip-1`, name: 'New pattern', start: 0, length: 16, notes: [] }], notes: [] };
         project.tracks.push(track); project.selectedTrack = id; project.selectedClip = track.clips[0].id;
         if (audio.context) syncAudioMix();
         editorTab = 'piano'; renderTracks(); renderArrangement(); renderEditor(); pushUndoSnapshot(before); setDirty(); notify('Instrument track added');
@@ -2461,7 +2467,7 @@
               DRUM_LANES.forEach(kind=>{if(steps[kind]&&!Array.isArray(steps[kind]))throw new Error('Invalid drum pattern');clip.steps[kind]=[...new Set((steps[kind]||[]).filter(step=>Number.isInteger(step)&&step>=0&&step<16))];});
             }else{
               const notes=entry.notes||source.notes||[];if(!Array.isArray(notes)||notes.length>10000)throw new Error('Invalid note pattern');
-              clip.notes=notes.map(note=>{if(!note||!Number.isFinite(Number(note.pitch)))throw new Error('Invalid note');const start=clamp(finiteNumber(note.start,0),0,15.95);return {start,pitch:clamp(Math.round(note.pitch),0,127),duration:clamp(finiteNumber(note.duration,1),.05,16-start),velocity:clamp(finiteNumber(note.velocity,.78),.01,1)};});
+              clip.notes=notes.map(note=>{if(!note||!Number.isFinite(Number(note.pitch)))throw new Error('Invalid note');const start=clamp(finiteNumber(note.start,0),0,15.95);return {start,pitch:clamp(Math.round(note.pitch),0,127),duration:clamp(finiteNumber(note.duration,1),.05,32-start),velocity:clamp(finiteNumber(note.velocity,.78),.01,1),...(note.firstPassOnly?{firstPassOnly:true}:{})};});
             }
             return clip;
           });return track;
