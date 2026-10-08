@@ -18,9 +18,29 @@
     for(const bits of [16,24]){const encoded=api.sessionWav(buffer,bits,false),view=new DataView(await encoded.blob.arrayBuffer());check(view.getUint16(34,true)===bits&&view.getUint32(24,true)===48000&&view.byteLength===44+3*2*bits/8,`${bits}-bit WAV has valid rate, depth and interleaved byte count`);}
     const normalized=api.sessionWav(buffer,24,true);check(Math.abs(normalized.scale-Math.pow(10,-1/20))<.00001,'normalization preserves dynamics at −1 dBFS');
     api.sessionStarter('piano');project=api.getProject();project.tracks[0].clips[0].notes=[{pitch:60,start:0,duration:1,velocity:.8}];project.loopStart=0;project.loopEnd=2;
-    q('#exportWavButton').click();check(q('#sessionExportDialog').open,'WAV action opens export quality controls');q('#sessionExportRange').value='loop';q('#sessionExportBits').value='24';q('#sessionExportRate').value='48000';
-    const blobs=[],urlBase=URL.createObjectURL,clickBase=HTMLAnchorElement.prototype.click;URL.createObjectURL=blob=>{blobs.push(blob);return urlBase(blob);};HTMLAnchorElement.prototype.click=function(){};
-    try{await api.sessionRenderWav();check(q('#sessionExportStatus').textContent.includes('Exported 24-bit'),'range render finishes and reports the selected quality');const view=new DataView(await blobs.at(-1).arrayBuffer());let peak=0;for(let i=44;i<view.byteLength-2;i+=6){let sample=view.getUint8(i)|(view.getUint8(i+1)<<8)|(view.getUint8(i+2)<<16);if(sample&0x800000)sample-=0x1000000;peak=Math.max(peak,Math.abs(sample));}check(peak>100,'sampled piano export contains audible PCM data in a fresh offline context');}
+    project.tracks.push({id:'unrelated-missing-audio',name:'Unrelated audio',type:'audio',volume:.8,pan:0,mute:false,solo:false,effects:[],clips:[{id:'missing-audio-clip',name:'Unavailable recording',start:0,length:4,sampleId:'not-in-the-imported-audio-store'}]});
+    q('#exportWavButton').click();check(q('#sessionExportDialog').open,'WAV action opens export quality controls');q('#sessionExportRange').value='loop';q('#sessionExportBits').value='24';q('#sessionExportRate').value='48000';q('#sessionExportScope').value='track';
+    const blobs=[],downloads=[],urlBase=URL.createObjectURL,clickBase=HTMLAnchorElement.prototype.click;URL.createObjectURL=blob=>{blobs.push(blob);return urlBase(blob);};HTMLAnchorElement.prototype.click=function(){downloads.push({url:this.href,name:this.download});};
+    try{
+      project.title='Snapshot render';project.tempo=120;const pending=api.sessionRenderWav();
+      q('#sessionExportDialog .dialog-close').click();check(!q('#sessionExportDialog').open&&q('#sessionRenderButton').disabled,'export can be hidden while rendering so the session remains editable');
+      project.title='Edited later';project.tempo=240;project.tracks[0].clips[0].notes=[];project.loopEnd=20;
+      await pending;
+      q('#exportWavButton').click();check(q('#sessionExportDialog').open&&!q('#sessionDownloadButton').disabled,'returning to Export retains the completed preview');
+      check(q('#sessionExportStatus').textContent.includes('Ready: 24-bit'),'range render finishes and reports the selected quality');
+      check(q('#sessionExportStatus').textContent.startsWith('Ready:'),'selected-track export ignores unavailable audio outside its rendering scope');
+      check(!q('#sessionExportReview').hidden&&q('#sessionExportPreview').src.startsWith('blob:')&&!q('#sessionDownloadButton').disabled,'export exposes the actual WAV preview before downloading');
+      for(let i=0;i<100&&q('#sessionExportPreview').readyState<1;i++)await sleep(20);
+      check(q('#sessionExportPreview').readyState>=1&&Math.abs(q('#sessionExportPreview').duration-3)<.01,'the preview player decodes the exported 24-bit WAV and exposes its captured duration');
+      check(downloads.length===0,'rendering waits for an explicit download action');
+      const view=new DataView(await blobs.at(-1).arrayBuffer());let peak=0;
+      for(let i=44;i<view.byteLength-2;i+=6){let sample=view.getUint8(i)|(view.getUint8(i+1)<<8)|(view.getUint8(i+2)<<16);if(sample&0x800000)sample-=0x1000000;peak=Math.max(peak,Math.abs(sample));}
+      check(peak>100,'sampled piano export contains audible PCM data in a fresh offline context');
+      check(view.getUint32(40,true)/(48000*6)===3,'export keeps its captured tempo, loop range and notes while the session changes');
+      q('#sessionDownloadButton').click();check(downloads.length===1&&downloads[0].url===q('#sessionExportPreview').src&&downloads[0].name==='Snapshot-render-Piano-24bit.wav','Download delivers the reviewed WAV with its captured project name');
+      q('#sessionNormalize').checked=true;q('#sessionNormalize').dispatchEvent(new Event('change',{bubbles:true}));
+      check(q('#sessionExportReview').hidden&&q('#sessionDownloadButton').disabled,'changing export settings requires a new render');
+    }
     finally{URL.createObjectURL=urlBase;HTMLAnchorElement.prototype.click=clickBase;q('#sessionExportDialog').close();}
     check(JSON.parse(localStorage.getItem('sonora-session-backups-v1')).length>0,'session replacement creates recoverable snapshots');
   }finally{q('#stopButton').click();api.replaceProject(JSON.parse(original));api.saveProject();}

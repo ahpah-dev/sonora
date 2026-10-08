@@ -1982,9 +1982,9 @@
         }
         source.connect(filter); filter.connect(gain); gain.connect(output); source.start(time); source.stop(time + length + .02);
       }
-      function collectEvents() {
+      function collectEvents(snapshot=project) {
         const events = [];
-        project.tracks.forEach(track => {
+        snapshot.tracks.forEach(track => {
           for (const clip of track.clips || []) {
             if (track.type === 'drums') {
               const steps = stepsForClip(track, clip);
@@ -1999,7 +1999,7 @@
                 for (const [index, note] of notesForClip(track, clip).entries()) {
                   if(note.firstPassOnly&&offset>0)continue;
                   const beat = clip.start + offset + note.start;
-                  if (beat < clip.start + clip.length) events.push({ id: `${track.id}:${clip.id}:${offset}:${index}`, beat, track, note, duration: Math.min(note.duration,clip.start+clip.length-beat) * 60 / project.tempo });
+                  if (beat < clip.start + clip.length) events.push({ id: `${track.id}:${clip.id}:${offset}:${index}`, beat, track, note, duration: Math.min(note.duration,clip.start+clip.length-beat) * 60 / snapshot.tempo });
                 }
               }
             }

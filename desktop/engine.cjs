@@ -16,6 +16,7 @@ function makeEngine({binary,assistant,notify=()=>{},readApiKey=()=>null,fetchImp
     });}finally{if(active===job)active=null;}
   }
   function checkScope(plan,request){
+    if(assistant.checkScope)return assistant.checkScope(plan,request);
     if(request.scope==='add'&&(plan.title!==null||plan.tempo!==null||plan.tracks.some(t=>t.action!=='add')))throw Error('The proposal went beyond adding tracks. Try again.');
     if(request.scope==='selected'&&(plan.title!==null||plan.tempo!==null||plan.tracks.some(t=>t.action!=='update'||t.trackId!==request.context.selectedTrack)))throw Error('The proposal changed more than the selected track. Try again.');
     return plan;

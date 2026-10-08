@@ -18,13 +18,13 @@ http.createServer((req,res)=>{
   }
   if(pathname==='/__verify/test.js'){
     const name=new URL(req.url,'http://localhost').searchParams.get('suite');
-    const allowed=['editor','audio','session','timeline'];
+    const allowed=['editor','audio','session','timeline','workflow','acoustic'];
     if(!allowed.includes(name)){res.writeHead(404);res.end();return;}
     fs.readFile(path.join(sourceRoot,'studio',`sonora-${name}.test.js`),(err,bytes)=>{if(err){res.writeHead(404);res.end();return;}res.setHeader('Content-Type','application/javascript');res.end(bytes);});return;
   }
   if(pathname==='/__verify/'){
     let html=fs.readFileSync(path.join(root,'studio/index.html'),'utf8');
-    const api='window.sonoraVerification={sessionWav,sessionRange,sessionPosition,sessionLoopClip,sessionStarter,sessionRenderWav,collectEvents,scheduler,audio,getProject:()=>project,replaceProject:next=>restoreProjectSnapshot(JSON.stringify(next)),getTrack,saveProject,notesForClip,pianoBank,pianoWarmNotes,pianoSamplesFor,pianoVelocityMix,pianoTouch,SYNTH_PRESETS,PIANO_PRESETS,proVoice,proDrumVoice,proSynth,liveNoteDown,liveNoteUp,selectedNotes};';
+    const api='window.sonoraVerification={sessionWav,sessionRange,sessionPosition,sessionLoopClip,sessionStarter,sessionRenderWav,collectEvents,scheduler,audio,getProject:()=>project,replaceProject:next=>restoreProjectSnapshot(JSON.stringify(next)),getTrack,saveProject,notesForClip,pianoBank,pianoWarmNotes,pianoSamplesFor,pianoVelocityMix,pianoTouch,SYNTH_PRESETS,PIANO_PRESETS,proVoice,proDrumVoice,proSynth,liveNoteDown,liveNoteUp,selectedNotes,acousticWarmTrack,acousticWarmProject,acousticSamplesFor,acousticNeedsSamples,acousticBuffers,ACOUSTIC_PRESETS};';
     html=html.replace('    })();\n  </script>',api+'\n    })();\n  </script>');
     const harness=fs.readFileSync(path.join(__dirname,'verify-ui.js'),'utf8');
     html=html.replace('</body>','<script>'+harness+'</script></body>');res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);return;

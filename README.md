@@ -6,13 +6,15 @@ A free and open source digital audio workstation for the browser. Compose, recor
 
 ## Desktop and AI music assistant
 
-Sonora 5.1 includes a portable Windows 10/11 x64 app. Instruments and the official Codex CLI are bundled. Normal music production works offline; AI generation requires internet access. This release is unsigned; checksums accompany the [GitHub release](https://github.com/ahpah-dev/sonora/releases/tag/v5.1.9).
+Sonora 5.2 includes a portable Windows 10/11 x64 app. Instruments and the official Codex CLI are bundled. Normal music production works offline; AI generation requires internet access. This release is unsigned; checksums accompany the [GitHub release](https://github.com/ahpah-dev/sonora/releases/tag/v5.2.0).
 
 Open **Create with AI** in the desktop app. Connect Codex using ChatGPT device-code sign-in (or reuse an existing local Codex sign-in), or connect an OpenAI API key. Keys are verified, encrypted using Electron's Windows-backed `safeStorage`, and never stored in browser local storage, projects or source code. Sonora does not log out your shared Codex CLI account.
 
 The model selector contains only `gpt-6-astra`, `gpt-6-luna`, and `gpt-6.1-sol`. Reasoning effort is low/medium/high/xhigh/max, plus none for Luna. Account access and limits still apply. Codex uses your ChatGPT/Codex limits; API requests have separate usage charges. [Official model catalog](https://developers.openai.com/api/docs/models) · [Codex authentication](https://learn.chatgpt.com/docs/auth)
 
 Ask for a melody, beat, arrangement, mix adjustment or instrument change. Scope requests to the selected track, add new tracks, or arrange the session. Review a typed proposal before applying it; each application is one undoable edit. Existing imported audio is preserved. Music generation sends the prompt, MIDI patterns, instrument settings and enabled local music measurements to OpenAI; audio recordings and audio bytes are excluded. Model-generated code is never evaluated. Codex runs ephemerally with user configuration, shell, plugins, apps, web search and MCP disabled; only validated musical proposals reach the session.
+
+An optional **Creative brief** sets style, key/tonality, 1–64 bars, energy and musical development. Your written request takes precedence. **Selected clip only** rewrites one instrument or drum clip while preserving the other clips and track settings; the native engine checks this scope before returning a proposal. **Quick draft** chooses Low effort and one pass without audio rendering. **Preserve motif** makes motif continuity an explicit constraint for the automatic refinement pass.
 
 **Analyze music locally** is enabled by default. Sonora renders up to 28 seconds of the current mix and measures exact MIDI timing, repeated sections, swing, bar-by-bar pitch content, audio attacks, spectral balance, peak/RMS level, clipping and stereo correlation. The selected GPT-6 or GPT-6.1 model receives these measurements. Raw audio never leaves the device. The draft is also rendered and checked before review; listen to its preview or choose **Improve using this analysis** to request a revision. Use the loop range to analyze a different section. Analysis is a bounded local signal check, not direct model audio perception or a guarantee of musical quality. It can be switched off to skip the render step.
 
@@ -27,20 +29,23 @@ npm ci --prefix desktop
 npm run desktop:package
 ```
 
-The executable is written to `desktop-release/Sonora-5.1.9-win-x64.exe`. `npm run desktop:dev` opens the development app. A matching `v5.1.9` tag runs the pinned GitHub Actions workflow, checks the web build/tests, builds the portable executable and publishes it with a SHA-256 checksum.
+The executable is written to `desktop-release/Sonora-5.2.0-win-x64.exe`. `npm run desktop:dev` opens the development app. A matching `v5.2.0` tag runs the pinned GitHub Actions workflow, checks the web build/tests, builds the portable executable and publishes it with a SHA-256 checksum.
 
 `npm test` includes typed proposal validation, privacy, supported model/effort combinations, preserving existing content, edit scope, cancellation and Responses API contract tests. To explicitly test a live signed-in Codex account, run `node scripts/assistant.test.cjs --live`. `/__assistant-ui/` on the localhost dev server then exposes a clearly marked UI fixture using the resulting proposal to check review/apply/undo without another inference call. Neither fixture ships to production.
 
 The desktop smoke suite verifies the complete two-pass workflow with real piano rendering, fallback, cancellation, Apply and Undo. To explicitly evaluate a real 16-bar GPT-6.1 Sol arrangement with your existing sign-in, run `electron composition-live.cjs --smoke-test` from `desktop/` using the installed local Electron executable. This makes two model requests and saves the draft, revision, measured report and local WAV preview in ignored `screenshots/` files.
 
+`electron upgrade-live.cjs --smoke-test` explicitly evaluates a creative brief with all five recorded acoustic instrument families, local review, Apply, the actual WAV download and Undo. It makes two model requests. Once recorded, `--replay` repeats that integration check against the saved proposals without another model call.
+
 - **Introduction:** expressive visuals, an interactive listening room, responsive layouts, and a direct launch into the studio.
 - **Studio:** arrangement, piano roll, synth and drum design, audio import and recording, effects, automation, mixing, MIDI, and WAV export.
-- **Instruments:** 49 factory sounds; layered oscillators, FM, saturation, key tracking, dynamic response, stereo unison and LFO modulation. Seven layered drum voices offer tuning, tone, decay, gain and pan, with closed/open-hat choking.
+- **Instruments:** 59 factory sounds, including ten acoustic patches across recorded cello, flute, harp, marimba and upright bass banks. Acoustic controls include brightness, body, dynamic response, attack, release, spread and tuning. Sustain loops support cello/flute; bass alternates recorded round robins. The existing synth engine provides layered oscillators, FM, saturation, key tracking, unison and LFO modulation. Seven layered drum voices offer tuning, tone, decay, gain and pan, with closed/open-hat choking. Sample provenance and CC0 notices are in [the acoustic bank](site/assets/acoustic/README.md).
 - **Piano:** recorded Studio Grand and Felt Piano use smoothly blended velocity layers from locally hosted Steinway recordings. Mellow Upright preserves the website's synthesized piano voice. Nine controls shape tone, attack, body, decay, release, dynamics, stereo spread and tuning. Performance supports 25/49/88 keys, polyphony, chord assistance, sustain and MIDI pedal input.
 - **Piano roll:** all 128 MIDI pitches, drag drawing, both-edge note trimming, Alt-drag copying, pitch/time zoom, auto-scroll, chord building, scale guides, ghost notes, velocity editing, humanize, legato, keyboard input and undo.
 - **Arrangement:** split, trim, duplicate and move clips; choose a loop range from a clip or enter its boundaries. Count-in and metronome follow the audio clock. MIDI records only inside the selected clip after count-in.
+- **Workflow:** Ctrl/Cmd + K searches actions, tracks and sounds. Add Track offers an explicit instrument, drum or audio choice, starting empty. Context actions follow the selected track/clip; empty sessions offer useful starting actions without adding music.
 - **Projects:** browser autosave, five recovery snapshots, session templates and portable `.sonora` projects including imported audio.
-- **Export:** stereo 16/24-bit PCM WAV at 44.1/48/96 kHz, full mix or selected channel, arrangement or loop range, effect tails, optional −1 dBFS peak normalization, and MIDI export.
+- **Export:** stereo 16/24-bit PCM WAV at 44.1/48/96 kHz, full mix or selected channel, arrangement or loop range and effect tails. A captured session snapshot renders while you keep editing. Preview the actual WAV and check peak/RMS before downloading; peak protection only reduces excessive level, while optional normalization can boost quiet mixes. MIDI export remains available.
 
 ## Run locally
 
@@ -60,9 +65,9 @@ npm test
 
 ## Source layout
 
-`site/` contains the introduction. `studio/` contains the self-contained workstation and its Studio, Pro, Piano, Design and Session extensions. Design controls presentation and layout; Session handles recovery, loop transport and export. `scripts/build.cjs` creates `dist/`, which Vercel hosts as a static site.
+`site/` contains the introduction and local instrument banks. `studio/` contains the self-contained workstation and its Studio, Pro, Piano, Acoustic, Design, Session, Timeline, Listening, Assistant and Workflow extensions. `scripts/build.cjs` creates `dist/`, which Vercel hosts as a static site.
 
-The generated studio HTML is reproducible from source; edit the source files rather than the generated file. `npm test` checks trimmed-note timing and PCM serialization. The development-only `/__verify/` page offers Editor, Audio and Session regression suites: click Play then Stop once to unlock Web Audio and run each suite. These tests exercise gestures, undo, real offline audio, piano spectral differences, dynamic response, drum choking, count-in, recovery and WAV export. Use a disposable localhost session: the tests modify its project and browser storage. The verification page and its test API are never included in the production build.
+The generated studio HTML is reproducible from source; edit the source files rather than the generated file. `npm test` checks trimmed-note timing, PCM serialization and AI contracts. The development-only `/__verify/` page offers Editor, Audio, Acoustic, Session, Timeline and Workflow suites. These exercise gestures, undo, actual offline audio, instrument dynamics, drum choking, count-in, recovery and preview/download export. The desktop CI runs these audio/workflow checks in a disposable Electron profile. The verification page and test API are excluded from production.
 
 ## Data and browser support
 

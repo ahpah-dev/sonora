@@ -14,6 +14,10 @@ async function run(){
   const buffer={length:4,numberOfChannels:2,sampleRate:48000,getChannelData:i=>new Float32Array(i?[.5,-.5,0,.25]:[1,-1,0,2])};
   for(const bits of [16,24]){const result=sandbox.sessionWav(buffer,bits,false),view=new DataView(await result.blob.arrayBuffer());assert.equal(view.getUint16(34,true),bits);assert.equal(view.getUint32(24,true),48000);assert.equal(view.getUint32(40,true),4*2*bits/8);assert.equal(view.byteLength,44+4*2*bits/8);assert.equal(result.peak,2);if(bits===16){assert.equal(view.getInt16(44,true),32767);assert.equal(view.getInt16(48,true),-32768);}else{assert.equal(view.getUint8(44),255);assert.equal(view.getUint8(46),127);assert.equal(view.getUint8(52),128);}}
   const normalized=sandbox.sessionWav(buffer,24,true);assert(Math.abs(normalized.peak*normalized.scale-Math.pow(10,-1/20))<1e-6);
+  const protectedMix=sandbox.sessionWav(buffer,24,false,true);assert.equal(protectedMix.scale,normalized.scale);assert.equal(protectedMix.clippedSamples,1);assert(protectedMix.rms>0);
+  const quiet={...buffer,getChannelData:()=>new Float32Array([.05,-.1,0,.15])},protectedQuiet=sandbox.sessionWav(quiet,16,false,true);assert.equal(protectedQuiet.scale,1,'Peak protection must not amplify a quiet mix');assert(sandbox.sessionWav(quiet,16,true,true).scale>1,'Explicit normalization can increase a quiet mix');
+  assert.throws(()=>sandbox.sessionWav({...quiet,getChannelData:()=>new Float32Array([NaN,0,0,0])},24),/invalid samples/);assert.throws(()=>sandbox.sessionWav(buffer,32),/PCM/);
+  const frozen={tempo:60,tracks:[{id:'frozen',type:'synth',clips:[{id:'phrase',start:0,length:4,notes:[{pitch:60,start:0,duration:2,velocity:.7}]}]}]};assert.equal(sandbox.collectEvents(frozen)[0].duration,2,'Snapshot event collection must use its own tempo and notes');
   console.log('PASS stereo16/24-bit PCM byte order, full scale, clipping, sample rate and normalization');
 }
 run().catch(error=>{console.error(error);process.exitCode=1;});

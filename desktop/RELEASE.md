@@ -1,3 +1,13 @@
+Sonora 5.2.0 improves composition, instrument sound and everyday workflow.
+
+- Find actions, tracks and sounds with Ctrl/Cmd + K. Add an instrument, drum or audio track through a clear picker, with no prefilled clips. Context controls follow your selection.
+- Play ten new acoustic patches across recorded cello, flute, harp, marimba and upright bass banks. Adjust tone, dynamics, attack, release and tuning. All recordings and CC0 notices are bundled for offline use.
+- Guide AI with an optional creative brief: style, key, length, energy and development. Your written request takes precedence. Quick draft uses one Low-effort pass.
+- Rewrite a selected clip while preserving the other clips and track settings. Native validation checks the edit scope; Apply supports one-step Undo.
+- Review harmonic overlaps, bass/kick timing and recognizable motifs. The bounded refinement pass preserves passage boundaries and can explicitly protect motifs.
+- Render a stable session snapshot while continuing to edit. Preview the actual WAV, check peak/RMS, and download it when ready. Optional peak protection reduces excessive levels without compression; normalization can boost quieter mixes.
+- Verify the packaged renderer with real offline PCM, instrument loading, workflow, export and AI Apply/Undo regression tests.
+
 Sonora 5.1.9 improves AI composition and musical development.
 
 - Plan shared harmony, complementary instrument roles, recognizable melodic motifs, answering phrases, contrast and endings.
