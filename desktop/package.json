@@ -1,7 +1,7 @@
 {
   "name": "sonora-desktop",
   "productName": "Sonora",
-  "version": "5.1.1",
+  "version": "5.1.2",
   "private": true,
   "description": "Sonora music studio with a local Codex music assistant",
   "author": "Sonora contributors",
@@ -55,6 +55,10 @@
       {
         "from": "../LICENSE",
         "to": "LICENSE"
+      },
+      {
+        "from": "licenses",
+        "to": "licenses"
       }
     ],
     "win": {

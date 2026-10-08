@@ -1,0 +1,7 @@
+Sonora's original application code is licensed under the MIT License.
+
+The bundled OpenAI Codex CLI is version 0.161.0, distributed under the Apache License 2.0. Its license is included as Codex-LICENSE.txt.
+Source and matching release: https://github.com/openai/codex/tree/rust-v0.161.0
+Codex has not been modified. Native dependency notices accompany the bundled Codex vendor directory.
+
+Electron and Chromium's license files accompany the application executable.
