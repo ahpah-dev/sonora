@@ -42,7 +42,34 @@
         if(plan.tempo!==null||plan.title!==null){const p=document.createElement('p');p.className='assistant-meta';p.textContent=[plan.title!==null?`Title: ${plan.title}`:null,plan.tempo!==null?`Tempo: ${plan.tempo} BPM`:null].filter(Boolean).join(' · ');result.append(p);}
         const list=document.createElement('div');list.className='assistant-changes';for(const change of plan.tracks){const row=document.createElement('div'),name=document.createElement('strong'),detail=document.createElement('span');const existing=project.tracks.find(t=>t.id===change.trackId);name.textContent=`${({add:'Add',update:'Edit',remove:'Remove'})[change.action]} · ${change.name||existing?.name||change.instrument}`;const notes=change.clips?.reduce((sum,c)=>sum+c.notes.length+Object.values(c.steps).reduce((a,v)=>a+v.length,0),0)||0;detail.textContent=[change.instrument,change.clips!==null?`${change.clips.length} clips · ${notes} notes / hits`:null,change.parameters.length?`${change.parameters.length} sound controls`:null,change.effectPreset,change.volume!==null?`Level ${Math.round(change.volume*100)}%`:null,change.mute!==null?(change.mute?'Muted':'Unmuted'):null].filter(Boolean).join(' · ')||'Track settings';row.append(name,detail);list.append(row);}result.append(list);
         if(!plan.tracks.length&&plan.title===null&&plan.tempo===null){assistantStatus('The assistant returned advice with no project changes.');return;}
-        const actions=document.createElement('div');actions.className='assistant-review-actions';const apply=studioButton('Apply to session',()=>{try{if(assistantApplied)return;if(JSON.stringify(project)!==assistantBase)throw Error('The session changed since this proposal. Generate again to keep your edits.');const before=JSON.stringify(project);const next=SonoraAssistant.applyPlan(project,assistantProposal,assistantCatalog());stopPlayback(false);releaseAllLiveNotes();editorTab=next.tracks.find(t=>t.id===next.selectedTrack).type==='drums'?'drums':'piano';restoreProjectSnapshot(JSON.stringify(next));pushUndoSnapshot(before);saveProject();assistantApplied=true;if($('#assistantRefine'))$('#assistantRefine').disabled=true;apply.disabled=true;apply.textContent='Applied ✓';assistantStatus('Applied to your session. Close this panel to play, or ask for another change. Undo restores the previous version.');notify('AI proposal applied · Ctrl+Z to undo');}catch(error){assistantStatus(assistantError(error),true);}},'text-button pro-primary');actions.append(apply,studioButton('Discard',()=>{assistantProposal=null;result.replaceChildren();assistantReleasePreview();assistantQuality=null;assistantStatus('Proposal discarded. Your session is unchanged.');},'text-button'));result.append(actions);
+        const applyError=document.createElement('p');applyError.id='assistantApplyError';applyError.className='assistant-apply-error';applyError.setAttribute('role','alert');applyError.hidden=true;result.append(applyError);
+        const actions=document.createElement('div');actions.className='assistant-review-actions';
+        const apply=studioButton('Apply to session',()=>{
+          try{
+            if(assistantApplied)return;applyError.hidden=true;
+            if(!assistantProposal||!assistantBase)throw Error('This proposal is unavailable. Generate a new proposal.');
+            if(SonoraAssistant.musicalSnapshot(project)!==SonoraAssistant.musicalSnapshot(JSON.parse(assistantBase)))throw Error('The session changed since this proposal. Generate again to keep your edits.');
+            const before=JSON.stringify(project),next=SonoraAssistant.applyPlan(project,assistantProposal,assistantCatalog());
+            const changed=next.tracks.filter(track=>!project.tracks.some(t=>t.id===track.id)||plan.tracks.some(change=>change.action==='update'&&change.trackId===track.id));
+            const target=changed.find(t=>t.id===next.selectedTrack)||changed.find(t=>t.clips.length)||changed[0];
+            if(target){next.selectedTrack=target.id;next.selectedClip=target.clips[0]?.id||null;}
+            stopPlayback(false);releaseAllLiveNotes();const selected=next.tracks.find(t=>t.id===next.selectedTrack);editorTab=selected.type==='audio'?'audio':selected.type==='drums'?'drums':'piano';
+            restoreProjectSnapshot(JSON.stringify(next));pushUndoSnapshot(before);saveProject();assistantApplied=true;
+            if($('#assistantRefine'))$('#assistantRefine').disabled=true;apply.disabled=true;apply.textContent='Applied ✓';
+            assistantStatus('Applied to your session. Undo restores the previous version.');assistantClose();assistantRevealChanges();
+            const clips=changed.reduce((sum,t)=>sum+t.clips.length,0);notify(clips?`AI proposal applied · ${clips} clip${clips===1?'':'s'} · Ctrl+Z to undo`:'AI settings applied · Ctrl+Z to undo');
+          }catch(error){const message=assistantError(error);applyError.textContent=message;applyError.hidden=false;assistantStatus(message,true);result.scrollTop=result.scrollHeight;notify(`Could not apply: ${message}`);}
+        },'text-button pro-primary');apply.id='assistantApply';
+        actions.append(apply,studioButton('Discard',()=>{assistantProposal=null;result.replaceChildren();assistantReleasePreview();assistantQuality=null;assistantStatus('Proposal discarded. Your session is unchanged.');},'text-button'));result.append(actions);
+      }
+      function assistantRevealChanges(){
+        const pane=$('.arrangement-pane'),clip=gridEl.querySelector('.clip.selected'),lane=clip?.closest('.arrange-lane')||[...gridEl.querySelectorAll('.arrange-lane')].find(el=>el.dataset.track===project.selectedTrack);
+        if(!lane)return;
+        if(clip){const available=Math.max(1,pane.clientWidth-48),width=clip.getBoundingClientRect().width;if(width>available)timelineZoom(project.zoom*available/width);}
+        const selected=gridEl.querySelector('.clip.selected'),target=selected?.closest('.arrange-lane')||lane;
+        pane.scrollTop=Math.max(0,target.getBoundingClientRect().top-pane.getBoundingClientRect().top+pane.scrollTop-$('.arrange-toolbar').offsetHeight-rulerEl.offsetHeight);trackListEl.scrollTop=pane.scrollTop;
+        if(selected){pane.scrollLeft=Math.max(0,selected.getBoundingClientRect().left-gridEl.getBoundingClientRect().left-24);seekToBeat(selectedClipFor()?.start||0);}
+        gridEl.tabIndex=-1;gridEl.focus({preventScroll:true});
       }
       $('#assistantForm').addEventListener('submit',async event=>{
         event.preventDefault();if(assistantBusy||!window.sonoraDesktop||!assistantConnected[$('#assistantProvider').value])return;

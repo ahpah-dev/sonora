@@ -8,6 +8,10 @@ const added={action:'add',trackId:null,name:'Piano theme',instrument:'Studio Gra
 const plan={summary:'Added a two-section piano theme.',title:null,tempo:null,tracks:[added]};
 function mutate(edit){const p=structuredClone(plan);edit(p);return p;}
 async function run(){
+  const originalSnapshot=JSON.stringify(project),viewChanged=structuredClone(project);viewChanged.zoom=.25;viewChanged.selectedTrack='another';viewChanged.selectedClip=null;viewChanged.tracks[0].rollBase=12;
+  assert.equal(assistant.musicalSnapshot(project),assistant.musicalSnapshot(viewChanged));assert.equal(JSON.stringify(project),originalSnapshot);
+  for(const edit of [p=>p.tempo++,p=>p.tracks[0].clips[0].notes[0].pitch++,p=>p.tracks[0].clips[0].start++,p=>p.tracks[0].synth.engine='other',p=>p.tracks[0].mute=true,p=>p.tracks[0].volume=.3,p=>p.loopEnd=16]){const changed=structuredClone(project);edit(changed);assert.notEqual(assistant.musicalSnapshot(project),assistant.musicalSnapshot(changed));}
+  console.log('PASS view-only changes preserve AI proposals; tempo, notes, clips, instruments, levels and loop edits invalidate stale proposals');
   for(const model of assistant.models){for(const effort of model.efforts)assert.equal(assistant.selection(model.id,effort).id,model.id);}
   assert.throws(()=>assistant.selection('gpt-5.6-sol','high'));assert.throws(()=>assistant.selection('gpt-6.1-sol','none'));assert.throws(()=>assistant.selection('gpt-6-astra','ultra'));
   const next=assistant.applyPlan(project,plan,catalog,'test');assert.equal(project.tracks.length,1);assert.equal(next.tracks.length,2);assert.equal(next.tracks[1].synth.pianoTone,.7);assert.equal(next.tracks[1].clips.length,2);assert.equal(next.tracks[1].effects[0].type,'reverb');assert.equal(next.selectedTrack,next.tracks[1].id);

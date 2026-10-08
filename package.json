@@ -1,6 +1,6 @@
 {
   "name": "sonora",
-  "version": "5.1.7",
+  "version": "5.1.8",
   "private": true,
   "description": "A creative music studio in your browser, with a dedicated Sonora introduction site.",
   "scripts": {

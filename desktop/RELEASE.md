@@ -1,3 +1,11 @@
+Sonora 5.1.8 fixes applying AI proposals.
+
+- Zoom, track selection and piano pitch scrolling no longer invalidate a generated proposal.
+- Apply closes the assistant and reveals the affected clip, even on later bars or tracks below the viewport.
+- Apply failures display a clear message beside the button.
+- Real musical changes still require a fresh proposal to protect your edits.
+- Applied notes persist locally and the entire proposal can be undone in one step.
+
 Sonora 5.1.7 improves timeline editing.
 
 - Zoom the arrangement from 12.5% to 400% with the zoom buttons or Ctrl / Cmd + wheel. Clips and the timeline physically shrink when zooming out.
