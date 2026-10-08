@@ -1,8 +1,10 @@
-Sonora 5.1.4 removes the standard Windows title bar and starts new projects with an empty arrangement.
+Sonora 5.1.5 makes AI generation activity visible.
 
-- Integrated dark title bar with native window controls and drag support.
-- One Studio Grand piano track, no preloaded clips or notes.
-- The demo remains available under Start a session. Saved projects still reopen normally.
+- Live connection, composition, proposal-writing and validation stages.
+- Elapsed time, activity history and streamed API output counts.
+- A Low effort shortcut, clear waiting messages and clean cancellation.
+- Music is still reviewed before applying changes.
+- Integrated dark desktop title bar and empty new sessions.
 
 Sonora 5.1 adds a portable Windows music studio and a Codex/OpenAI music assistant.
 

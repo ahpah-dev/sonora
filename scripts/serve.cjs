@@ -12,9 +12,9 @@ http.createServer((req,res)=>{
     const fixtureFile=path.join(sourceRoot,'screenshots/live-proposal.json');
     if(!fs.existsSync(fixtureFile)){res.writeHead(404);res.end('Run node scripts/assistant.test.cjs --live first');return;}
     const fixture=fs.readFileSync(fixtureFile,'utf8').replaceAll('<','\\u003c');
-    const shim=`window.sonoraDesktop={status:async()=>({codex:{connected:true},api:false}),onEvent:()=>()=>{},cancel:async()=>true,generate:async request=>{if(request.model==='gpt-6-luna'&&request.effort==='none')return ${fixture};return ${fixture};}};`;
+    const shim=`let fixtureListener=()=>{},fixtureCancelled=false;window.sonoraDesktop={status:async()=>({codex:{connected:true},api:false}),onEvent:callback=>{fixtureListener=callback;return ()=>{};},cancel:async()=>{fixtureCancelled=true;return true;},generate:async()=>{fixtureCancelled=false;for(const phase of ['connecting','composing','writing','validating']){if(fixtureCancelled)throw Error('Request cancelled');fixtureListener({kind:'progress',phase,message:({connecting:'Checking your Codex connection…',composing:'Composing your music…',writing:'Writing notes, clips and instrument settings…',validating:'Checking note ranges, instruments and edit scope…'})[phase]});await new Promise(resolve=>setTimeout(resolve,3000));}if(fixtureCancelled)throw Error('Request cancelled');fixtureListener({kind:'progress',phase:'complete',message:'Your proposal is ready to review.'});return ${fixture};}};`;
     let html=fs.readFileSync(path.join(root,'studio/index.html'),'utf8').replace('<script>','<script>'+shim+'</script><script>');
-    html=html.replace('</body>','<div style="position:fixed;bottom:2px;right:8px;z-index:99999;font:10px monospace;color:#b8efdb">Local UI fixture · real Codex proposal · no live request</div></body>');res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);return;
+    html=html.replace('</body>','<div style="position:fixed;bottom:2px;right:8px;z-index:99999;font:10px monospace;color:#b8efdb">Local UI fixture · simulated activity · real Codex proposal</div></body>');res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);return;
   }
   if(pathname==='/__verify/test.js'){
     const name=new URL(req.url,'http://localhost').searchParams.get('suite');
