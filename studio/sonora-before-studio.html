@@ -1326,6 +1326,16 @@
           if (clip && preview) preview.innerHTML = clipPreviewMarkup(track, clip);
         });
       }
+      function refreshTrimPreview(drag) {
+        const track = drag.sourceTrack, clip = { ...drag.clip };
+        // Preview the pending left trim without changing the source pattern before commit.
+        if (drag.mode === 'resize-left') {
+          const shift = clip.start - drag.startBeat;
+          if (track.type === 'drums') clip.steps = rotateClipSteps(stepsForClip(track, drag.clip), shift * 4);
+          else if (track.type !== 'audio') clip.notes = rotateClipNotes(notesForClip(track, drag.clip), shift, 16);
+        }
+        drag.element.querySelector('.clip-wave').innerHTML = clipPreviewMarkup(track, clip);
+      }
       document.addEventListener('pointermove', event => {
         if (!arrangeDrag) return;
         const drag=arrangeDrag,deltaX=event.clientX-drag.startX,deltaY=event.clientY-drag.startY;
@@ -1341,12 +1351,14 @@
           const quantum=snap||.25,sourceLimit=drag.sourceTrack.type==='audio'&&drag.clip.sourceDuration?Math.max(quantum,(drag.clip.sourceDuration-(drag.clip.offset||0))*project.tempo/60):Infinity,maxLength=Math.min(drag.timelineBeats+32-drag.clip.start,sourceLimit);
           drag.clip.length=clamp(Math.round((drag.startLength+deltaBeat)/quantum)*quantum,quantum,maxLength);
           drag.element.style.setProperty('--clip-width',`${drag.clip.length/drag.timelineBeats*100}%`);drag.element.querySelector('.clip-info').textContent=`${clipLengthLabel(drag.clip.length)} · ${drag.sourceTrack.type==='audio'?'AUDIO':drag.sourceTrack.type==='drums'?'DRUMS':'MIDI'}`;
+          refreshTrimPreview(drag);
         }else if(drag.mode==='resize-left'){
           const quantum=drag.sourceTrack.type==='drums'?Math.max(.25,snap||.25):snap||.25,end=drag.startBeat+drag.startLength,audioLimit=drag.sourceTrack.type==='audio'?Math.max(0,drag.startBeat-drag.startOffset*project.tempo/60):0;
           const nextStart=clamp(Math.round((drag.startBeat+deltaBeat)/quantum)*quantum,audioLimit,end-quantum);
           drag.clip.start=nextStart;drag.clip.length=end-nextStart;
           if(drag.sourceTrack.type==='audio')drag.clip.offset=Math.max(0,drag.startOffset+(nextStart-drag.startBeat)*60/project.tempo);
           drag.element.style.setProperty('--clip-left',`${drag.clip.start/drag.timelineBeats*100}%`);drag.element.style.setProperty('--clip-width',`${drag.clip.length/drag.timelineBeats*100}%`);drag.element.querySelector('.clip-info').textContent=`${clipLengthLabel(drag.clip.length)} · ${drag.sourceTrack.type==='audio'?'AUDIO':drag.sourceTrack.type==='drums'?'DRUMS':'MIDI'}`;
+          refreshTrimPreview(drag);
         }else{
           const position=drag.startBeat+deltaBeat,maxStart=drag.timelineBeats+32-drag.clip.length;
           drag.clip.start=clamp(snap?Math.round(position/snap)*snap:Math.round(position*1000)/1000,0,maxStart);

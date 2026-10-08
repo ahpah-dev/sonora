@@ -1,3 +1,9 @@
+Sonora 5.2.1 fixes clip trim previews.
+
+- Notes and waveforms redraw during edge trimming instead of squeezing before release.
+- Left-edge previews reflect the pending trim while keeping the source pattern intact until commit.
+- Both trim directions retain one-step Undo.
+
 Sonora 5.2.0 improves composition, instrument sound and everyday workflow.
 
 - Find actions, tracks and sounds with Ctrl/Cmd + K. Add an instrument, drum or audio track through a clear picker, with no prefilled clips. Context controls follow your selection.

@@ -30,5 +30,18 @@
   api.replaceProject(fixture);box(point(26,0,.05),point(31,1,.95));document.activeElement.blur();window.dispatchEvent(new KeyboardEvent('keydown',{key:'Delete',bubbles:true}));check(api.getProject().tracks.flatMap(t=>t.clips).length===3,'Delete with an empty selection leaves clips untouched');
   api.replaceProject(fixture);pane.scrollLeft=0;for(let i=0;i<4;i++)q('#zoomIn').click();pane.scrollLeft=100;const r=rect();check(r.left<pane.getBoundingClientRect().left,'fixture scrolls horizontally');
   box(point(2,0,.05),point(12,1,.95));check(selected().join(',')==='box-a,box-b','selection uses correct coordinates after timeline zoom and horizontal scrolling');
+  const trimFixture=JSON.parse(JSON.stringify(fixture));trimFixture.tracks[0].clips[0].length=16;
+  trimFixture.tracks[0].clips[0].notes=[{pitch:60,start:4,duration:2,velocity:.8},{pitch:64,start:8,duration:2,velocity:.8}];
+  for(const edge of ['right','left']){
+    api.replaceProject(trimFixture);pane.scrollLeft=0;
+    const clip=q('[data-clip-id="box-a"]'),handle=clip.querySelector(edge==='right'?'.clip-resize-handle':'.clip-trim-left'),p=point(edge==='right'?20:4,0),delta=width()/32*(edge==='right'?-8:4),notesBefore=JSON.stringify(api.getProject().tracks[0].clips[0].notes);
+    pointer(handle,'pointerdown',p.x,p.y);pointer(grid,'pointermove',p.x+delta,p.y);
+    const preview=clip.querySelector('.clip-wave').innerHTML,first=clip.querySelector('.pattern-note');
+    check(Math.abs(parseFloat(first.style.getPropertyValue('--note-left'))-(edge==='right'?50:0))<.01,`${edge} trim redraws notes at their pending timing during dragging`);
+    check(JSON.stringify(api.getProject().tracks[0].clips[0].notes)===notesBefore,`${edge} trim preview leaves source notes untouched until release`);
+    pointer(grid,'pointerup',p.x+delta,p.y);
+    check(q('[data-clip-id="box-a"] .clip-wave').innerHTML===preview,`${edge} trim preview matches the committed preview without a jump`);
+    q('#undoButton').click();check(api.getProject().tracks[0].clips[0].length===16&&JSON.stringify(api.getProject().tracks[0].clips[0].notes)===notesBefore,`${edge} trim remains one undoable edit`);
+  }
   api.replaceProject(fixture);q('#zoomOut').click();q('#zoomOut').click();return results;
 })()
