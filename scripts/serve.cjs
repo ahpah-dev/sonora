@@ -18,7 +18,7 @@ http.createServer((req,res)=>{
   }
   if(pathname==='/__verify/test.js'){
     const name=new URL(req.url,'http://localhost').searchParams.get('suite');
-    const allowed=['editor','audio','session'];
+    const allowed=['editor','audio','session','timeline'];
     if(!allowed.includes(name)){res.writeHead(404);res.end();return;}
     fs.readFile(path.join(sourceRoot,'studio',`sonora-${name}.test.js`),(err,bytes)=>{if(err){res.writeHead(404);res.end();return;}res.setHeader('Content-Type','application/javascript');res.end(bytes);});return;
   }

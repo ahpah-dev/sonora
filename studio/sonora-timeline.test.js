@@ -1,0 +1,34 @@
+(async()=>{
+  const q=s=>document.querySelector(s),api=window.sonoraVerification,results=[],check=(ok,label)=>{if(!ok)throw Error(label);results.push('PASS '+label);};
+  const baseline=JSON.parse(JSON.stringify(api.getProject())),track=JSON.parse(JSON.stringify(baseline.tracks[0]));
+  track.id='timeline-a';track.type='synth';track.clips=[{id:'box-a',name:'Melody A',start:4,length:4,notes:[]}];
+  const second={...JSON.parse(JSON.stringify(track)),id:'timeline-b',name:'Second track',clips:[{id:'box-b',name:'Melody B',start:6,length:4,notes:[]},{id:'box-c',name:'Later',start:20,length:4,notes:[]}]};
+  const fixture={...baseline,zoom:1,selectedTrack:track.id,selectedClip:null,tracks:[track,second]};api.replaceProject(fixture);
+  const grid=q('#arrangementGrid'),pane=q('.arrangement-pane');grid.setPointerCapture=()=>{};grid.hasPointerCapture=()=>false;
+  const pointer=(el,type,x,y,extra={})=>el.dispatchEvent(new PointerEvent(type,{clientX:x,clientY:y,pointerId:79,button:0,bubbles:true,...extra}));
+  const rect=()=>grid.getBoundingClientRect(),width=()=>rect().width,selected=()=>[...grid.querySelectorAll('.clip.selected')].map(el=>el.dataset.clipId).sort();
+  const point=(beat,lane,fraction=.5)=>{const r=rect(),row=grid.querySelectorAll('.arrange-lane')[lane].getBoundingClientRect();return{x:r.left+beat/32*r.width,y:row.top+row.height*fraction};};
+  const box=(from,to,extra={},cancel=false)=>{pointer(grid,'pointerdown',from.x,from.y,extra);pointer(grid,'pointermove',to.x,to.y,extra);check(!!q('.timeline-selection-box:not([hidden])'),'selection rectangle appears during dragging');pointer(grid,cancel?'pointercancel':'pointerup',to.x,to.y,extra);};
+  const initialWidth=width();for(let i=0;i<3;i++)q('#zoomOut').click();check(width()<initialWidth*.53,'zoom out reduces physical clip and grid width below the old minimum');
+  check(Math.abs(q('#ruler').getBoundingClientRect().width-width())<1,'ruler and timeline remain aligned');
+  for(let i=0;i<12;i++)q('#zoomOut').click();check(api.getProject().zoom===.125&&q('#zoomOut').disabled&&width()<initialWidth*.13,'zoom reaches 12.5% and disables at the lower bound');
+  api.replaceProject(fixture);const beforeSelection=JSON.stringify(api.getProject().tracks),beforeBeat=api.audio.playheadBeat;
+  box(point(2,0,.05),point(12,1,.95));check(selected().join(',')==='box-a,box-b','marquee selects intersecting clips across tracks');
+  check(JSON.stringify(api.getProject().tracks)===beforeSelection&&api.audio.playheadBeat===beforeBeat,'selection neither edits clips nor seeks the playhead');
+  const a=q('[data-clip-id="box-a"]'),p=point(6,0);pointer(a,'pointerdown',p.x,p.y);pointer(grid,'pointermove',p.x+width()/32*2,p.y);pointer(grid,'pointerup',p.x+width()/32*2,p.y);
+  check(api.getProject().tracks[0].clips[0].start===6&&api.getProject().tracks[1].clips[0].start===8,'group drag preserves relative timing across tracks');
+  q('#undoButton').click();check(api.getProject().tracks[0].clips[0].start===4&&api.getProject().tracks[1].clips[0].start===6,'one Undo restores the whole group move');
+  api.replaceProject(fixture);box(point(2,0,.05),point(12,1,.95));const cancelA=q('[data-clip-id="box-a"]'),cancelP=point(6,0);pointer(cancelA,'pointerdown',cancelP.x,cancelP.y);pointer(grid,'pointermove',cancelP.x+width()/32*3,cancelP.y);document.activeElement.blur();window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));check(api.getProject().tracks[0].clips[0].start===4&&api.getProject().tracks[1].clips[0].start===6,'Escape restores every clip in an unfinished group move');
+  api.replaceProject(fixture);box(point(12,1,.95),point(2,0,.05));check(selected().length===2,'reverse-direction selection works');
+  box(point(19,1,.05),point(25,1,.95),{shiftKey:true});check(selected().length===3,'Shift box adds clips to the selection');
+  box(point(26,0,.05),point(31,1,.95),{},true);check(selected().length===3&&!q('.timeline-selection-box'),'pointer cancellation restores the previous selection');
+  document.activeElement.blur();window.dispatchEvent(new KeyboardEvent('keydown',{key:'Delete',bubbles:true}));check(api.getProject().tracks.every(t=>t.clips.length===0),'Delete removes all selected clips across tracks');
+  q('#undoButton').click();check(api.getProject().tracks.flatMap(t=>t.clips).length===3,'one Undo restores the deleted selection');
+  api.replaceProject(fixture);box(point(2,0,.05),point(12,1,.95));q('#duplicateClipButton').click();check(api.getProject().tracks[0].clips.length===2&&api.getProject().tracks[1].clips.length===3&&selected().length===2,'Duplicate copies the selected group');
+  q('#undoButton').click();check(api.getProject().tracks.flatMap(t=>t.clips).length===3,'group duplication is one undoable edit');
+  api.replaceProject(fixture);box(point(2,0,.05),point(12,1,.95));const b=q('[data-clip-id="box-b"]'),pb=point(8,1);pointer(b,'pointerdown',pb.x,pb.y,{shiftKey:true});check(selected().join(',')==='box-a','Shift click toggles individual selected clips');
+  api.replaceProject(fixture);box(point(26,0,.05),point(31,1,.95));document.activeElement.blur();window.dispatchEvent(new KeyboardEvent('keydown',{key:'Delete',bubbles:true}));check(api.getProject().tracks.flatMap(t=>t.clips).length===3,'Delete with an empty selection leaves clips untouched');
+  api.replaceProject(fixture);pane.scrollLeft=0;for(let i=0;i<4;i++)q('#zoomIn').click();pane.scrollLeft=100;const r=rect();check(r.left<pane.getBoundingClientRect().left,'fixture scrolls horizontally');
+  box(point(2,0,.05),point(12,1,.95));check(selected().join(',')==='box-a,box-b','selection uses correct coordinates after timeline zoom and horizontal scrolling');
+  api.replaceProject(fixture);q('#zoomOut').click();q('#zoomOut').click();return results;
+})()

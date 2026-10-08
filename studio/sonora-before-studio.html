@@ -1142,7 +1142,7 @@
       }
       function renderRuler() {
         const bars = Math.max(4, Math.ceil(8 / project.zoom));
-        rulerEl.style.gridTemplateColumns = `repeat(${bars}, minmax(70px, 1fr))`;
+        rulerEl.style.gridTemplateColumns = `repeat(${bars}, minmax(0, 1fr))`;
         rulerEl.innerHTML = Array.from({ length: bars }, (_, index) => `<div class="bar-number">${String(index + 1).padStart(2,'0')}<small>${index === 0 ? 'bar' : ''}</small></div>`).join('');
         $('#arrange-title-placeholder');
       }
@@ -1222,12 +1222,12 @@
         const bars = arrangementBars(), visibleBeats = bars * 4;
         const timelineWidth = `${project.zoom * bars / 8 * 100}%`;
         $('.arrange-subtitle').textContent = `· ${bars} bars`;
-        rulerEl.style.gridTemplateColumns = `repeat(${bars}, minmax(70px, 1fr))`;
+        rulerEl.style.gridTemplateColumns = `repeat(${bars}, minmax(0, 1fr))`;
         rulerEl.style.width = timelineWidth;
-        rulerEl.style.minWidth = `${bars * 70}px`;
+        rulerEl.style.minWidth = `${bars * 70 * project.zoom}px`;
         rulerEl.innerHTML = Array.from({ length: bars }, (_, index) => `<div class="bar-number">${String(index + 1).padStart(2,'0')}<small>${index === 0 ? 'bar' : ''}</small></div>`).join('');
         gridEl.style.width = timelineWidth;
-        gridEl.style.minWidth = `${bars * 70}px`;
+        gridEl.style.minWidth = `${bars * 70 * project.zoom}px`;
         const snap = Number($('#snapSelect').value), gridLayers = [
           `repeating-linear-gradient(to right, transparent 0, transparent calc(${100 / bars}% - 1px), #2c2e33 calc(${100 / bars}% - 1px), #2c2e33 ${100 / bars}%)`,
           `repeating-linear-gradient(to right, transparent 0, transparent calc(${100 / (bars * 4)}% - 1px), #202227 calc(${100 / (bars * 4)}% - 1px), #202227 ${100 / (bars * 4)}%)`
@@ -2458,7 +2458,7 @@
       }
       function normalizeProjectFile(raw) {
         if(!raw||!Array.isArray(raw.tracks)||!raw.tracks.length||raw.tracks.length>64)throw new Error('Choose a valid Sonora project with 1–64 tracks');
-        const next=clone(raw);next.title=String(raw.title||'Untitled').slice(0,40);next.tempo=clamp(finiteNumber(raw.tempo,112),40,240);next.masterVolume=clamp(finiteNumber(raw.masterVolume,.82),0,1);next.masterEffects=normalizeFxChain(raw.masterEffects);next.zoom=clamp(finiteNumber(raw.zoom,1),.7,2);next.loop=raw.loop!==false;next.metronome=Boolean(raw.metronome);next.countIn=Boolean(raw.countIn);
+        const next=clone(raw);next.title=String(raw.title||'Untitled').slice(0,40);next.tempo=clamp(finiteNumber(raw.tempo,112),40,240);next.masterVolume=clamp(finiteNumber(raw.masterVolume,.82),0,1);next.masterEffects=normalizeFxChain(raw.masterEffects);next.zoom=clamp(finiteNumber(raw.zoom,1),.125,4);next.loop=raw.loop!==false;next.metronome=Boolean(raw.metronome);next.countIn=Boolean(raw.countIn);
         const selectedIndex=Math.max(0,raw.tracks.findIndex(t=>t.id===raw.selectedTrack));let selectedClipId=null;
         next.tracks=raw.tracks.map((source,index)=>{
           if(!source||!Array.isArray(source.clips)||source.clips.length>512)throw new Error('Invalid track clips in project');
@@ -2568,8 +2568,8 @@
         }
         renderEditor();
       }));
-      $('#zoomIn').addEventListener('click', () => { project.zoom = clamp(project.zoom * 1.25, .7, 2); renderArrangement(); setDirty(); });
-      $('#zoomOut').addEventListener('click', () => { project.zoom = clamp(project.zoom / 1.25, .7, 2); renderArrangement(); setDirty(); });
+      $('#zoomIn').addEventListener('click', () => timelineZoom(project.zoom * 1.25));
+      $('#zoomOut').addEventListener('click', () => timelineZoom(project.zoom / 1.25));
       document.querySelectorAll('[data-arrange-tool]').forEach(button => button.addEventListener('click', () => {
         arrangeTool = button.dataset.arrangeTool;
         document.querySelectorAll('[data-arrange-tool]').forEach(tool => tool.classList.toggle('active', tool === button));

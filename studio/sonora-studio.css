@@ -134,3 +134,9 @@ body[data-theme=graphite] .topbar,body[data-theme=graphite] .viewbar,body[data-t
 @media(max-width:1000px) { .studio-inspector { display:none; } .workarea,.studio-hidden-browser .workarea,.studio-hidden-inspector .workarea { grid-template-columns:210px minmax(0,1fr); } .brand { font-size:11px; } .project-name { display:none; } .topbar { grid-template-columns:110px auto 1fr; } .top-actions { gap:2px; } .top-actions .text-button { padding:0 6px; } .editor-tabs { gap:13px; } .studio-tag { display:none; } }
 @media(max-height:760px) { .editor { height:260px; flex-basis:260px; } .topbar { height:62px; flex-basis:62px; } .note-toolbar { min-height:32px; } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; } }
+/* Timeline tools keep visual feedback separate from the editable clips. */
+.timeline-selection-box { position:absolute;z-index:8;border:1px solid #85dccd;background:#85dccd20;box-shadow:0 0 0 1px #0e192a44;pointer-events:none;border-radius:3px; }
+.timeline-zoom-level { font:10px var(--font-mono,monospace);color:var(--muted);min-width:34px;text-align:center; }
+.timeline-selection-status { font-size:10px;color:#85dccd;margin-left:10px;white-space:nowrap; }
+.ruler .bar-number { min-width:0;overflow:hidden; }
+.arrangement-grid { touch-action:none; }

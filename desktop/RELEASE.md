@@ -1,3 +1,10 @@
+Sonora 5.1.7 improves timeline editing.
+
+- Zoom the arrangement from 12.5% to 400% with the zoom buttons or Ctrl / Cmd + wheel. Clips and the timeline physically shrink when zooming out.
+- Drag an empty timeline area with the Select tool to box-select clips across tracks. Shift adds to the selection or toggles a clip.
+- Move selected clips together, duplicate the group or delete the selection. Each edit supports Undo.
+- Selection remains accurate after zooming and scrolling. Escape cancels an unfinished selection or group move.
+
 Sonora 5.1.6 adds local music analysis for GPT-6 Astra, GPT-6 Luna and GPT-6.1 Sol.
 
 - Render up to 28 seconds of the audible session locally before generating.

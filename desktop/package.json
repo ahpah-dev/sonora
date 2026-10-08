@@ -1,7 +1,7 @@
 {
   "name": "sonora-desktop",
   "productName": "Sonora",
-  "version": "5.1.6",
+  "version": "5.1.7",
   "private": true,
   "description": "Sonora music studio with a local Codex music assistant",
   "author": "Sonora contributors",
@@ -9,7 +9,7 @@
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
-    "test": "electron smoke.cjs --smoke-test && electron listening-smoke.cjs --smoke-test",
+    "test": "electron smoke.cjs --smoke-test && electron listening-smoke.cjs --smoke-test && electron timeline-smoke.cjs --smoke-test",
     "prepare-assets": "node prepare.cjs",
     "package": "npm run prepare-assets && electron-builder --win portable --x64 --publish never"
   },

@@ -6,7 +6,7 @@ A free and open source digital audio workstation for the browser. Compose, recor
 
 ## Desktop and AI music assistant
 
-Sonora 5.1 includes a portable Windows 10/11 x64 app. Instruments and the official Codex CLI are bundled. Normal music production works offline; AI generation requires internet access. This release is unsigned; checksums accompany the [GitHub release](https://github.com/ahpah-dev/sonora/releases/tag/v5.1.6).
+Sonora 5.1 includes a portable Windows 10/11 x64 app. Instruments and the official Codex CLI are bundled. Normal music production works offline; AI generation requires internet access. This release is unsigned; checksums accompany the [GitHub release](https://github.com/ahpah-dev/sonora/releases/tag/v5.1.7).
 
 Open **Create with AI** in the desktop app. Connect Codex using ChatGPT device-code sign-in (or reuse an existing local Codex sign-in), or connect an OpenAI API key. Keys are verified, encrypted using Electron's Windows-backed `safeStorage`, and never stored in browser local storage, projects or source code. Sonora does not log out your shared Codex CLI account.
 
@@ -25,7 +25,7 @@ npm ci --prefix desktop
 npm run desktop:package
 ```
 
-The executable is written to `desktop-release/Sonora-5.1.6-win-x64.exe`. `npm run desktop:dev` opens the development app. A matching `v5.1.6` tag runs the pinned GitHub Actions workflow, checks the web build/tests, builds the portable executable and publishes it with a SHA-256 checksum.
+The executable is written to `desktop-release/Sonora-5.1.7-win-x64.exe`. `npm run desktop:dev` opens the development app. A matching `v5.1.7` tag runs the pinned GitHub Actions workflow, checks the web build/tests, builds the portable executable and publishes it with a SHA-256 checksum.
 
 `npm test` includes typed proposal validation, privacy, supported model/effort combinations, preserving existing content, edit scope, cancellation and Responses API contract tests. To explicitly test a live signed-in Codex account, run `node scripts/assistant.test.cjs --live`. `/__assistant-ui/` on the localhost dev server then exposes a clearly marked UI fixture using the resulting proposal to check review/apply/undo without another inference call. Neither fixture ships to production.
 
