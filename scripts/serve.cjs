@@ -6,6 +6,16 @@ http.createServer((req,res)=>{
   try{pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);}catch{res.writeHead(400);res.end();return;}
   // Verification UI exists only on this localhost server, never in dist/.
   const sourceRoot=path.resolve(__dirname,'..');
+  if(pathname==='/__assistant-ui/'){
+    // Local UI fixture uses a real proposal saved by the explicit live integration test.
+    // This bridge and fixture are never copied to dist or the desktop package.
+    const fixtureFile=path.join(sourceRoot,'screenshots/live-proposal.json');
+    if(!fs.existsSync(fixtureFile)){res.writeHead(404);res.end('Run node scripts/assistant.test.cjs --live first');return;}
+    const fixture=fs.readFileSync(fixtureFile,'utf8').replaceAll('<','\\u003c');
+    const shim=`window.sonoraDesktop={status:async()=>({codex:{connected:true},api:false}),onEvent:()=>()=>{},cancel:async()=>true,generate:async request=>{if(request.model==='gpt-6-luna'&&request.effort==='none')return ${fixture};return ${fixture};}};`;
+    let html=fs.readFileSync(path.join(root,'studio/index.html'),'utf8').replace('<script>','<script>'+shim+'</script><script>');
+    html=html.replace('</body>','<div style="position:fixed;bottom:2px;right:8px;z-index:99999;font:10px monospace;color:#b8efdb">Local UI fixture · real Codex proposal · no live request</div></body>');res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);return;
+  }
   if(pathname==='/__verify/test.js'){
     const name=new URL(req.url,'http://localhost').searchParams.get('suite');
     const allowed=['editor','audio','session'];

@@ -2,6 +2,9 @@ node_modules/
 dist/
 .vercel/
 .env*
+desktop-release/
+desktop/icon.png
+desktop/icon.ico
 !.env.example
 *.log
 .DS_Store

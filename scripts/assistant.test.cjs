@@ -1,0 +1,36 @@
+'use strict';
+const assert=require('node:assert/strict'),path=require('node:path');
+const assistant=require('../shared/assistant.js'),{makeEngine}=require('../desktop/engine.cjs');
+const steps=()=>Object.fromEntries(assistant.lanes.map(l=>[l,[]]));
+const catalog={instruments:[{name:'Studio Grand',kind:'synth',category:'Keys',synth:{engine:'piano',waveform:'sine',pianoTone:.92}},{name:'Pocket Kit',kind:'drums',category:'Drums',drum:{decay:.4}}],effects:[{name:'Big room',effects:[{type:'reverb',params:{mix:.15,size:1}}]}]};
+const project={title:'Test session',tempo:100,selectedTrack:'original',selectedClip:'original-clip',tracks:[{id:'original',name:'Original',type:'synth',instrument:'Studio Grand',synth:{engine:'piano'},clips:[{id:'original-clip',name:'Original',start:0,length:16,notes:[{pitch:60,start:0,duration:1,velocity:.7}]}]}]};
+const added={action:'add',trackId:null,name:'Piano theme',instrument:'Studio Grand',volume:.6,pan:-.12,mute:false,effectPreset:'Big room',parameters:[{name:'pianoTone',value:.7}],clips:[{name:'A section',start:0,length:16,notes:[{pitch:64,start:0,duration:3.5,velocity:.68},{pitch:67,start:4,duration:1,velocity:.9}],steps:steps()},{name:'B section',start:16,length:16,notes:[{pitch:72,start:0,duration:2,velocity:.74}],steps:steps()}]};
+const plan={summary:'Added a two-section piano theme.',title:null,tempo:null,tracks:[added]};
+function mutate(edit){const p=structuredClone(plan);edit(p);return p;}
+async function run(){
+  for(const model of assistant.models){for(const effort of model.efforts)assert.equal(assistant.selection(model.id,effort).id,model.id);}
+  assert.throws(()=>assistant.selection('gpt-5.6-sol','high'));assert.throws(()=>assistant.selection('gpt-6.1-sol','none'));assert.throws(()=>assistant.selection('gpt-6-astra','ultra'));
+  const next=assistant.applyPlan(project,plan,catalog,'test');assert.equal(project.tracks.length,1);assert.equal(next.tracks.length,2);assert.equal(next.tracks[1].synth.pianoTone,.7);assert.equal(next.tracks[1].clips.length,2);assert.equal(next.tracks[1].effects[0].type,'reverb');assert.equal(next.selectedTrack,next.tracks[1].id);
+  const drums=structuredClone(added);drums.instrument='Pocket Kit';drums.parameters=[];drums.clips=[{name:'Beat',start:0,length:16,notes:[],steps:{...steps(),kick:[0,4,8,12],hat:[0,2,4,6,8,10,12,14]}}];assert.equal(assistant.applyPlan(project,{...plan,tracks:[drums]},catalog,'drums').tracks[1].type,'drums');
+  const invalid=[p=>p.tracks[0].instrument='Unknown instrument',p=>p.tracks[0].clips[0].notes[0].pitch=128,p=>p.tracks[0].clips[0].notes[0].duration=-1,p=>p.tracks[0].clips[0].notes[0].start=16,p=>p.tracks[0].clips[0].notes[0].velocity=NaN,p=>p.tracks[0].parameters[0].name='__proto__',p=>p.tracks[0].parameters[0].value=2,p=>p.tracks[0].trackId='original',p=>p.tracks[0].clips[0].steps.hat=[17],p=>p.tracks[0].volume=Infinity,p=>p.tempo=300];
+  for(const edit of invalid)assert.throws(()=>assistant.applyPlan(project,mutate(edit),catalog));
+  assert.throws(()=>assistant.validatePlan({...plan,tracks:[{...added,action:'remove',trackId:'original',instrument:null,parameters:[],clips:null}]},catalog,project));
+  const audio=structuredClone(project);audio.tracks[0].type='audio';assert.throws(()=>assistant.validatePlan({...plan,tracks:[{...added,action:'update',trackId:'original'}]},catalog,audio));
+  const context=assistant.context({...project,secret:'must not leave the app',tracks:[{...project.tracks[0],sampleData:'private recording bytes'}]},catalog);assert(!JSON.stringify(context).includes('private recording'));assert(!JSON.stringify(context).includes('must not leave'));
+  const request={provider:'api',model:'gpt-6.1-sol',effort:'medium',scope:'add',prompt:'Add a piano theme',context};let outgoing;
+  const engine=makeEngine({binary:'unused',assistant,readApiKey:()=> 'test-key',fetchImpl:async(url,options)=>{assert.equal(url,'https://api.openai.com/v1/responses');outgoing=JSON.parse(options.body);return {ok:true,json:async()=>({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(plan)}]}]})};}});
+  assert.equal((await engine.generate(request)).tracks.length,1);assert.equal(outgoing.model,request.model);assert.equal(outgoing.reasoning.effort,'medium');assert.equal(outgoing.store,false);assert.equal(outgoing.text.format.strict,true);assert(!outgoing.tools);
+  await assert.rejects(()=>engine.generate({...request,model:'gpt-5'}));
+  const scopeEngine=makeEngine({binary:'unused',assistant,readApiKey:()=> 'test-key',fetchImpl:async()=>({ok:true,json:async()=>({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({...plan,tempo:120})}]}]})})});await assert.rejects(()=>scopeEngine.generate(request),/beyond adding/);
+  const incomplete=makeEngine({binary:'unused',assistant,readApiKey:()=> 'test-key',fetchImpl:async()=>({ok:true,json:async()=>({status:'incomplete'})})});await assert.rejects(()=>incomplete.generate(request),/did not finish/);
+  const limited=makeEngine({binary:'unused',assistant,readApiKey:()=> 'test-key',fetchImpl:async()=>({ok:false,status:429})});await assert.rejects(()=>limited.generate(request),/usage or rate limit/);
+  let abortStarted;const starting=new Promise(r=>abortStarted=r);const slow=makeEngine({binary:'unused',assistant,readApiKey:()=> 'test-key',fetchImpl:(_url,{signal})=>new Promise((_resolve,reject)=>{abortStarted();signal.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')));})});const pending=slow.generate(request);await starting;await assert.rejects(()=>slow.generate(request),/already running/);assert(slow.cancel());await assert.rejects(()=>pending,/cancelled/);
+  console.log('PASS assistant model/effort allowlist, typed MIDI/drum proposals, instrument controls, preservation, privacy, bounds, scope, Responses contract, incomplete/error handling and cancellation');
+  if(process.argv.includes('--live')){
+    const live=makeEngine({binary:path.resolve(__dirname,'../desktop/node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe'),assistant,notify:event=>console.log(event.kind)});
+    const status=await live.status();assert(status.connected,'A local Codex sign-in is required for this explicit live integration test');
+    const result=await live.generate({...request,provider:'codex',prompt:'Add a simple four-bar C-major piano melody, eight notes total. One clip, no other changes. Keep the summary short.'});assert(result.tracks.length>=1);const applied=assistant.applyPlan(project,result,catalog);assert(applied.tracks.length>1);assert(applied.tracks.at(-1).clips[0].notes.length>0);console.log('PASS live Codex GPT-6.1 Sol / medium → schema → validated playable MIDI proposal');
+    require('node:fs').mkdirSync(path.resolve(__dirname,'../screenshots'),{recursive:true});require('node:fs').writeFileSync(path.resolve(__dirname,'../screenshots/live-proposal.json'),JSON.stringify(result));
+  }
+}
+run().catch(error=>{console.error(error.message);process.exitCode=1;});

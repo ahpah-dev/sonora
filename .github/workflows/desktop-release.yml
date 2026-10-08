@@ -1,0 +1,44 @@
+name: Build Sonora desktop release
+on:
+  push:
+    tags: ['v5.*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Check release tag
+        shell: pwsh
+        run: |
+          $version = (Get-Content desktop/package.json | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw 'Dispatch this workflow on the matching version tag.' }
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check
+      - run: npm test
+      - run: npm ci --prefix desktop
+      - run: npm --prefix desktop run prepare-assets
+      - run: npm --prefix desktop test
+      - run: npm run desktop:package
+      - name: Create checksums
+        shell: pwsh
+        run: |
+          Get-FileHash desktop-release/*.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $([IO.Path]::GetFileName($_.Path))" } | Set-Content desktop-release/SHA256SUMS.txt
+      - name: Publish tested desktop build
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create $env:RELEASE_TAG desktop-release/*.exe desktop-release/SHA256SUMS.txt --repo $env:GITHUB_REPOSITORY --verify-tag --title "Sonora $env:RELEASE_TAG" --notes-file desktop/RELEASE.md
