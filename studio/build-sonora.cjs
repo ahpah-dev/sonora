@@ -8,6 +8,10 @@ function replace(find, value) {
   if (!html.includes(find)) throw new Error('Missing build anchor: ' + find.slice(0,100));
   html = html.replace(find, value);
 }
+// Imported and generated names may contain quotes or markup. Encode them in
+// the two legacy HTML attributes; visible names already use textContent.
+replace('      const $ = selector => document.querySelector(selector);', "      const $ = selector => document.querySelector(selector);\n      function htmlAttribute(value){return String(value).replace(/[&\"'<>]/g,char=>'&#'+char.charCodeAt(0)+';');}");
+html=html.replaceAll('aria-label="${track.name}', 'aria-label="${htmlAttribute(track.name)}');
 replace('  </style>', ['sonora-studio.css','sonora-pro.css','sonora-piano.css','sonora-design.css','sonora-session.css','sonora-assistant.css'].map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n') + '\n  </style>');
 replace('      setupWorkflow();', fs.readFileSync(path.join(root,'../shared/assistant.js'),'utf8')+'\n'+['sonora-studio.js','sonora-pro.js','sonora-piano.js','sonora-design.js','sonora-session.js','sonora-assistant.js'].map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n') + '\n      setupWorkflow();');
 replace("type:source.type==='drums'?'drums':'synth'", "type:source.type==='audio'?'audio':source.type==='drums'?'drums':'synth'");
