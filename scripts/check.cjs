@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'..');
-for(const file of ['site/site.js','shared/assistant.js','shared/listening.js','studio/sonora-listening.js','desktop/main.cjs','desktop/engine.cjs','desktop/preload.cjs','studio/sonora-assistant.js','studio/sonora-pro.js','studio/sonora-studio.js','studio/sonora-piano.js','studio/sonora-design.js','studio/sonora-session.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file});
+for(const file of ['site/site.js','shared/assistant.js','shared/listening.js','shared/composition.js','studio/sonora-listening.js','desktop/main.cjs','desktop/engine.cjs','desktop/preload.cjs','studio/sonora-assistant.js','studio/sonora-pro.js','studio/sonora-studio.js','studio/sonora-piano.js','studio/sonora-design.js','studio/sonora-session.js'])new vm.Script(fs.readFileSync(path.join(root,file),'utf8'),{filename:file});
 const html=fs.readFileSync(path.join(root,'dist/studio/index.html'),'utf8');
 new vm.Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
 const attributeContext={};vm.createContext(attributeContext);vm.runInContext(html.match(/function htmlAttribute\(value\)\{[^\n]+/)[0],attributeContext);

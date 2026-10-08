@@ -1,3 +1,12 @@
+Sonora 5.1.9 improves AI composition and musical development.
+
+- Plan shared harmony, complementary instrument roles, recognizable melodic motifs, answering phrases, contrast and endings.
+- Account for actual preset octave transposition, four-bar MIDI repeats and one-bar drum repeats. Variations and fills use separate clips.
+- Review the whole arrangement for patterns, dynamics, sounding registers, section activity, duplicate notes and articulation.
+- Refine composition makes one extra pass using the same selected model and effort, with MIDI observations and enabled local audio feedback. Disable it for a faster single request.
+- Keep the first valid draft if refinement fails or introduces more duplicate notes, mix clipping or empty musical changes. Cancellation covers both passes.
+- Review the final editable proposal and audio preview before applying it. The complete change supports one-step Undo.
+
 Sonora 5.1.8 fixes applying AI proposals.
 
 - Zoom, track selection and piano pitch scrolling no longer invalidate a generated proposal.

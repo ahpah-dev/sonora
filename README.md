@@ -6,7 +6,7 @@ A free and open source digital audio workstation for the browser. Compose, recor
 
 ## Desktop and AI music assistant
 
-Sonora 5.1 includes a portable Windows 10/11 x64 app. Instruments and the official Codex CLI are bundled. Normal music production works offline; AI generation requires internet access. This release is unsigned; checksums accompany the [GitHub release](https://github.com/ahpah-dev/sonora/releases/tag/v5.1.8).
+Sonora 5.1 includes a portable Windows 10/11 x64 app. Instruments and the official Codex CLI are bundled. Normal music production works offline; AI generation requires internet access. This release is unsigned; checksums accompany the [GitHub release](https://github.com/ahpah-dev/sonora/releases/tag/v5.1.9).
 
 Open **Create with AI** in the desktop app. Connect Codex using ChatGPT device-code sign-in (or reuse an existing local Codex sign-in), or connect an OpenAI API key. Keys are verified, encrypted using Electron's Windows-backed `safeStorage`, and never stored in browser local storage, projects or source code. Sonora does not log out your shared Codex CLI account.
 
@@ -18,6 +18,8 @@ Ask for a melody, beat, arrangement, mix adjustment or instrument change. Scope 
 
 The web studio shows the assistant's controls and links to the Windows download. Account connections run in the desktop app, not the public website. Use portable `.sonora` projects to transfer your work between desktop and browser.
 
+**Refine composition** is enabled by default. The assistant plans complementary instrument roles, shared harmony and melodic motifs, then makes one additional pass using whole-arrangement MIDI observations and enabled audio measurements. The review shows distinct phrase patterns, sounding registers, dynamics and possible note collisions. Preset octave transposition and the engine's four-bar MIDI / one-bar drum repetition are included in the composition instructions, so variations and fills use separate clips. The extra pass uses the same chosen model and effort. Turn it off for a faster single request; manual revisions also use one request. If refinement fails or introduces duplicated notes, mix clipping or empty musical changes, the first valid draft remains available. Cancellation discards both passes without changing the session.
+
 ### Build the Windows app
 
 ```sh
@@ -25,9 +27,11 @@ npm ci --prefix desktop
 npm run desktop:package
 ```
 
-The executable is written to `desktop-release/Sonora-5.1.8-win-x64.exe`. `npm run desktop:dev` opens the development app. A matching `v5.1.8` tag runs the pinned GitHub Actions workflow, checks the web build/tests, builds the portable executable and publishes it with a SHA-256 checksum.
+The executable is written to `desktop-release/Sonora-5.1.9-win-x64.exe`. `npm run desktop:dev` opens the development app. A matching `v5.1.9` tag runs the pinned GitHub Actions workflow, checks the web build/tests, builds the portable executable and publishes it with a SHA-256 checksum.
 
 `npm test` includes typed proposal validation, privacy, supported model/effort combinations, preserving existing content, edit scope, cancellation and Responses API contract tests. To explicitly test a live signed-in Codex account, run `node scripts/assistant.test.cjs --live`. `/__assistant-ui/` on the localhost dev server then exposes a clearly marked UI fixture using the resulting proposal to check review/apply/undo without another inference call. Neither fixture ships to production.
+
+The desktop smoke suite verifies the complete two-pass workflow with real piano rendering, fallback, cancellation, Apply and Undo. To explicitly evaluate a real 16-bar GPT-6.1 Sol arrangement with your existing sign-in, run `electron composition-live.cjs --smoke-test` from `desktop/` using the installed local Electron executable. This makes two model requests and saves the draft, revision, measured report and local WAV preview in ignored `screenshots/` files.
 
 - **Introduction:** expressive visuals, an interactive listening room, responsive layouts, and a direct launch into the studio.
 - **Studio:** arrangement, piano roll, synth and drum design, audio import and recording, effects, automation, mixing, MIDI, and WAV export.

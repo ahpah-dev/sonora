@@ -9,7 +9,7 @@ const js=source=>window.webContents.executeJavaScript(source),wait=async source=
 app.whenReady().then(async()=>{try{
   for(let i=0;i<100;i++){window=main.getWindow();if(window&&!window.webContents.isLoading())break;await new Promise(r=>setTimeout(r,100));}
   await js("document.querySelector('#assistantButton').click()");await wait("document.querySelector('#assistantConnectionState').textContent==='Connected'");
-  await js("document.querySelector('#assistantAnalyzeAudio').checked=false;document.querySelector('#assistantPrompt').value='Write a piano phrase';document.querySelector('#assistantForm').requestSubmit()");await wait("document.querySelector('#assistantStatus').textContent.startsWith('Ready to review')");
+  await js("document.querySelector('#assistantAnalyzeAudio').checked=false;document.querySelector('#assistantRefineComposition').checked=false;document.querySelector('#assistantPrompt').value='Write a piano phrase';document.querySelector('#assistantForm').requestSubmit()");await wait("document.querySelector('#assistantStatus').textContent.startsWith('Ready to review')");
   await js("document.querySelector('#assistantClose').click();document.querySelector('#zoomOut').click();document.querySelector('#assistantButton').click()");
   await js("[...document.querySelectorAll('#assistantResult button')].find(b=>b.textContent==='Apply to session').click()");
   const state=await js("({clips:document.querySelectorAll('#arrangementGrid .clip').length,open:document.querySelector('#assistantDialog').open,status:document.querySelector('#assistantStatus').textContent})");
