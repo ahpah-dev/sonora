@@ -1,7 +1,7 @@
 {
   "name": "sonora-desktop",
   "productName": "Sonora",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "private": true,
   "description": "Sonora music studio with a local Codex music assistant",
   "author": "Sonora contributors",
@@ -22,16 +22,51 @@
   "build": {
     "appId": "app.sonoradaw.desktop",
     "asar": true,
-    "directories": {"output": "../desktop-release"},
-    "files": ["main.cjs", "engine.cjs", "preload.cjs", "package.json"],
-    "extraResources": [
-      {"from": "../dist", "to": "studio", "filter": ["**/*", "!downloads/**"]},
-      {"from": "../shared", "to": "shared"},
-      {"from": "node_modules/@openai/codex-win32-x64/vendor", "to": "codex"},
-      {"from": "icon.png", "to": "icon.png"},
-      {"from": "../LICENSE", "to": "LICENSE"}
+    "directories": {
+      "output": "../desktop-release"
+    },
+    "files": [
+      "main.cjs",
+      "engine.cjs",
+      "preload.cjs",
+      "package.json"
     ],
-    "win": {"target": ["portable"], "icon": "icon.ico", "signExecutable": false},
-    "portable": {"artifactName": "Sonora-${version}-win-x64.exe", "useZip": true}
+    "extraResources": [
+      {
+        "from": "../dist",
+        "to": "studio",
+        "filter": [
+          "**/*",
+          "!downloads/**"
+        ]
+      },
+      {
+        "from": "../shared",
+        "to": "shared"
+      },
+      {
+        "from": "node_modules/@openai/codex-win32-x64/vendor",
+        "to": "codex"
+      },
+      {
+        "from": "icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "../LICENSE",
+        "to": "LICENSE"
+      }
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "icon.ico",
+      "signExecutable": false
+    },
+    "portable": {
+      "artifactName": "Sonora-${version}-win-x64.exe",
+      "useZip": true
+    }
   }
 }

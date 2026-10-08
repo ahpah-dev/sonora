@@ -1,6 +1,6 @@
 {
   "name": "sonora",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "private": true,
   "description": "A creative music studio in your browser, with a dedicated Sonora introduction site.",
   "scripts": {
@@ -11,5 +11,7 @@
     "desktop:dev": "npm run build && npm --prefix desktop start",
     "desktop:package": "npm run build && npm --prefix desktop run package"
   },
-  "engines": { "node": "24.x" }
+  "engines": {
+    "node": "24.x"
+  }
 }
