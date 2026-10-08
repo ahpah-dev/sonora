@@ -7,6 +7,9 @@
   font-family:Inter,'Segoe UI',system-ui,sans-serif; color-scheme:dark;
 }
 body,.app { background:var(--bg); }
+.desktop-titlebar { height:34px; padding:0 150px 0 16px; display:flex; align-items:center; gap:9px; background:#101419; color:#a0acb9; font-size:11px; font-weight:600; letter-spacing:.4px; user-select:none; -webkit-app-region:drag; }
+.desktop-titlebar::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--mint); }
+.sonora-desktop .app { height:calc(100vh - 34px); }
 button,input,select,summary { font-family:inherit; }
 button { font-weight:500; }
 button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible { outline:2px solid var(--mint); outline-offset:3px; }

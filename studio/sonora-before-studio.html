@@ -724,7 +724,7 @@
       ];
       const DRUM_LANES = ['kick','snare','hat','openHat','clap','tom','rim'];
       const emptyDrumSteps = () => Object.fromEntries(DRUM_LANES.map(kind => [kind, []]));
-      const defaultProject = () => ({
+      const demoProject = () => ({
         title: 'Midnight in Motion', tempo: 112, selectedTrack: 'lead', selectedClip: 'lead-1',
         metronome: false, countIn: false, loop: true, zoom: 1, masterVolume: .82, masterEffects: [],
         tracks: [
@@ -733,6 +733,11 @@
           { id: 'drums', name: 'Drums', instrument: 'Pocket Kit', type: 'drums', color: COLORS.drums, volume: .82, mute: false, solo: false, clips: [{ id: 'drums-1', name: 'Pocket groove', start: 0, length: 16 },{ id: 'drums-2', name: 'Pocket groove', start: 16, length: 16 }], steps: { kick: [0,7,8,14], snare: [4,12], hat: [0,2,4,6,8,10,12,14] } },
           { id: 'pad', name: 'Atmosphere', instrument: 'Soft Strings', type: 'synth', color: COLORS.pad, volume: .48, mute: false, solo: false, waveform: 'sine', clips: [{ id: 'pad-1', name: 'Warm wash', start: 8, length: 16 }], notes: [{start:0,pitch:48,duration:3.8,velocity:.52},{start:4,pitch:51,duration:3.8,velocity:.48},{start:8,pitch:55,duration:3.8,velocity:.5},{start:12,pitch:53,duration:3.8,velocity:.52}] }
         ]
+      });
+      const defaultProject = () => ({
+        title:'Untitled session',tempo:120,selectedTrack:'piano',selectedClip:null,
+        metronome:false,countIn:false,loop:true,zoom:1,masterVolume:.82,masterEffects:[],
+        tracks:[{id:'piano',name:'Piano',instrument:'Studio Grand',type:'synth',color:COLORS.lead,volume:.65,pan:0,mute:false,solo:false,waveform:'triangle',synth:{engine:'piano',pianoModel:'grand',pianoTone:.92,pianoHammer:.68,pianoBody:.56,pianoDecay:8,pianoRelease:.24,pianoDynamics:1.15,pianoAttack:.002,width:.6},notes:[],clips:[]}]
       });
       let project = defaultProject();
       try {

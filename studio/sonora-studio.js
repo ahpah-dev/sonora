@@ -59,7 +59,7 @@
       }
       function studioNewProject(demo=false) {
         if(microphoneTake||microphonePending){notify('Finish the recording first');return;}
-        stopPlayback(true);const before=JSON.stringify(project);const next=defaultProject();if(!demo){next.title='Untitled session';next.tracks=next.tracks.slice(0,1);next.tracks[0].name='Instrument 1';next.tracks[0].notes=[];next.tracks[0].clips=[];next.selectedClip=null;}
+        stopPlayback(true);const before=JSON.stringify(project);const next=demo?demoProject():defaultProject();
         editorTab='piano';restoreProjectSnapshot(JSON.stringify(next));pushUndoSnapshot(before);notify(demo?'Demo session loaded · undo to restore':'New session · undo restores your previous project');
       }
       function studioAddAudioTrack() {

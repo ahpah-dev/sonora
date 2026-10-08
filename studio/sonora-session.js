@@ -101,7 +101,7 @@
       };
       function sessionStarter(kind){
         if(microphoneTake||microphonePending){notify('Finish recording first');return;}
-        sessionBackup(JSON.stringify(project),true);const before=JSON.stringify(project);stopPlayback(true);const next=defaultProject();next.title=kind==='demo'?'Midnight in Motion':kind==='beat'?'Beat session':kind==='piano'?'Piano session':'Untitled session';
+        sessionBackup(JSON.stringify(project),true);const before=JSON.stringify(project);stopPlayback(true);const next=kind==='demo'?demoProject():defaultProject();next.title=kind==='demo'?'Midnight in Motion':kind==='beat'?'Beat session':kind==='piano'?'Piano session':'Untitled session';
         if(kind!=='demo'){next.tracks=[];const preset=SYNTH_PRESETS.find(p=>p.name===(kind==='piano'?'Studio Grand':'Glass Keys'))||SYNTH_PRESETS[0];
           const track={id:'session-instrument',name:kind==='piano'?'Piano':'Instrument 1',type:'synth',instrument:preset.name,synth:clone(preset.synth),color:'#74dec7',volume:.65,pan:0,mute:false,solo:false,effects:[],clips:[]};
           if(kind!=='empty')track.clips=[{id:'session-clip',name:'Pattern 1',start:0,length:16,notes:[]}];next.tracks.push(track);

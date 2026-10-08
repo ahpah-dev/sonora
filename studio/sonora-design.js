@@ -74,4 +74,8 @@
       const designBaseBrowser=studioRenderBrowser;studioRenderBrowser=function(){designBaseBrowser();designDecorate();};
       const designBaseInspector=studioRenderInspector;studioRenderInspector=function(){designBaseInspector();designDecorate();};
       const designBasePreferences=studioApplyPreferences;studioApplyPreferences=function(){designBasePreferences();for(const key of ['browser','inspector'])if(!studioPrefs[key])(key==='browser'?$('.studio-browser'):$('#studioInspector'))?.classList.remove('design-panel-open');designSyncPanels();};
+      if(window.sonoraDesktop){
+        document.body.classList.add('sonora-desktop');
+        const titlebar=document.createElement('div');titlebar.className='desktop-titlebar';titlebar.textContent='SONORA';titlebar.setAttribute('aria-hidden','true');document.body.prepend(titlebar);
+      }
       designInit();

@@ -1,3 +1,9 @@
+Sonora 5.1.4 removes the standard Windows title bar and starts new projects with an empty arrangement.
+
+- Integrated dark title bar with native window controls and drag support.
+- One Studio Grand piano track, no preloaded clips or notes.
+- The demo remains available under Start a session. Saved projects still reopen normally.
+
 Sonora 5.1 adds a portable Windows music studio and a Codex/OpenAI music assistant.
 
 - Download the Windows x64 executable and open it. Instruments and Codex are bundled; no Node.js installation is required.
