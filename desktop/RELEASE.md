@@ -1,10 +1,11 @@
-Sonora 5.1.5 makes AI generation activity visible.
+Sonora 5.1.6 adds local music analysis for GPT-6 Astra, GPT-6 Luna and GPT-6.1 Sol.
 
-- Live connection, composition, proposal-writing and validation stages.
-- Elapsed time, activity history and streamed API output counts.
-- A Low effort shortcut, clear waiting messages and clean cancellation.
-- Music is still reviewed before applying changes.
-- Integrated dark desktop title bar and empty new sessions.
+- Render up to 28 seconds of the audible session locally before generating.
+- Give the model bar-by-bar pitch content, repeated MIDI timing, swing and measured mix information.
+- Render and analyze the proposed mix before applying it; audition its preview.
+- Request a revision with Improve using this analysis.
+- Detect clipping, silence and strong stereo phase cancellation.
+- Raw audio stays on the device. This is local signal analysis, not direct model hearing.
 
 Sonora 5.1 adds a portable Windows music studio and a Codex/OpenAI music assistant.
 

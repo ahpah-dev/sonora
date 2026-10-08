@@ -85,8 +85,8 @@
         }catch(error){notify(error.message?.includes('Choose')||error.message?.includes('support')?error.message:'Could not decode this audio file');}
       }
       function studioStopSources(){for(const source of studioSources){try{source.stop();}catch(_){}}studioSources.clear();releaseAllLiveNotes();}
-      function studioAudioVoice(ctx,output,clip,time,elapsed=0,live=false) {
-        const buffer=importedInstrumentBuffers.get(clip.sampleId);if(!buffer)return;const spb=60/project.tempo,total=clip.length*spb,offset=(clip.offset||0)+elapsed;
+      function studioAudioVoice(ctx,output,clip,time,elapsed=0,live=false,tempo=project.tempo) {
+        const buffer=importedInstrumentBuffers.get(clip.sampleId);if(!buffer)return;const spb=60/tempo,total=clip.length*spb,offset=(clip.offset||0)+elapsed;
         const duration=Math.min(total-elapsed,buffer.duration-offset);if(duration<=0)return;
         const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;source.connect(gain);gain.connect(output);
         const level=clamp(finiteNumber(clip.gain,1),0,2),fadeIn=Math.min(clip.fadeIn||0,total/2),fadeOut=Math.min(clip.fadeOut||0,total/2);

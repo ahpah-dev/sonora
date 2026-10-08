@@ -1,13 +1,13 @@
 {
   "name": "sonora",
-  "version": "5.1.5",
+  "version": "5.1.6",
   "private": true,
   "description": "A creative music studio in your browser, with a dedicated Sonora introduction site.",
   "scripts": {
     "build": "node scripts/build.cjs",
     "dev": "node scripts/serve.cjs",
     "check": "node scripts/check.cjs",
-    "test": "node scripts/test.cjs && node scripts/assistant.test.cjs",
+    "test": "node scripts/test.cjs && node scripts/listening.test.cjs && node scripts/assistant.test.cjs",
     "desktop:dev": "npm run build && npm --prefix desktop start",
     "desktop:package": "npm run build && npm --prefix desktop run package"
   },

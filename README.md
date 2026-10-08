@@ -6,13 +6,15 @@ A free and open source digital audio workstation for the browser. Compose, recor
 
 ## Desktop and AI music assistant
 
-Sonora 5.1 includes a portable Windows 10/11 x64 app. Instruments and the official Codex CLI are bundled. Normal music production works offline; AI generation requires internet access. This release is unsigned; checksums accompany the [GitHub release](https://github.com/ahpah-dev/sonora/releases/tag/v5.1.5).
+Sonora 5.1 includes a portable Windows 10/11 x64 app. Instruments and the official Codex CLI are bundled. Normal music production works offline; AI generation requires internet access. This release is unsigned; checksums accompany the [GitHub release](https://github.com/ahpah-dev/sonora/releases/tag/v5.1.6).
 
 Open **Create with AI** in the desktop app. Connect Codex using ChatGPT device-code sign-in (or reuse an existing local Codex sign-in), or connect an OpenAI API key. Keys are verified, encrypted using Electron's Windows-backed `safeStorage`, and never stored in browser local storage, projects or source code. Sonora does not log out your shared Codex CLI account.
 
 The model selector contains only `gpt-6-astra`, `gpt-6-luna`, and `gpt-6.1-sol`. Reasoning effort is low/medium/high/xhigh/max, plus none for Luna. Account access and limits still apply. Codex uses your ChatGPT/Codex limits; API requests have separate usage charges. [Official model catalog](https://developers.openai.com/api/docs/models) · [Codex authentication](https://learn.chatgpt.com/docs/auth)
 
-Ask for a melody, beat, arrangement, mix adjustment or instrument change. Scope requests to the selected track, add new tracks, or arrange the session. Review a typed proposal before applying it; each application is one undoable edit. Existing imported audio is preserved. Music generation sends the prompt, MIDI patterns and instrument settings to OpenAI; audio recordings and audio bytes are excluded. Model-generated code is never evaluated. Codex runs ephemerally with user configuration, shell, plugins, apps, web search and MCP disabled; only validated musical proposals reach the session.
+Ask for a melody, beat, arrangement, mix adjustment or instrument change. Scope requests to the selected track, add new tracks, or arrange the session. Review a typed proposal before applying it; each application is one undoable edit. Existing imported audio is preserved. Music generation sends the prompt, MIDI patterns, instrument settings and enabled local music measurements to OpenAI; audio recordings and audio bytes are excluded. Model-generated code is never evaluated. Codex runs ephemerally with user configuration, shell, plugins, apps, web search and MCP disabled; only validated musical proposals reach the session.
+
+**Analyze music locally** is enabled by default. Sonora renders up to 28 seconds of the current mix and measures exact MIDI timing, repeated sections, swing, bar-by-bar pitch content, audio attacks, spectral balance, peak/RMS level, clipping and stereo correlation. The selected GPT-6 or GPT-6.1 model receives these measurements. Raw audio never leaves the device. The draft is also rendered and checked before review; listen to its preview or choose **Improve using this analysis** to request a revision. Use the loop range to analyze a different section. Analysis is a bounded local signal check, not direct model audio perception or a guarantee of musical quality. It can be switched off to skip the render step.
 
 The web studio shows the assistant's controls and links to the Windows download. Account connections run in the desktop app, not the public website. Use portable `.sonora` projects to transfer your work between desktop and browser.
 
@@ -23,7 +25,7 @@ npm ci --prefix desktop
 npm run desktop:package
 ```
 
-The executable is written to `desktop-release/Sonora-5.1.5-win-x64.exe`. `npm run desktop:dev` opens the development app. A matching `v5.1.5` tag runs the pinned GitHub Actions workflow, checks the web build/tests, builds the portable executable and publishes it with a SHA-256 checksum.
+The executable is written to `desktop-release/Sonora-5.1.6-win-x64.exe`. `npm run desktop:dev` opens the development app. A matching `v5.1.6` tag runs the pinned GitHub Actions workflow, checks the web build/tests, builds the portable executable and publishes it with a SHA-256 checksum.
 
 `npm test` includes typed proposal validation, privacy, supported model/effort combinations, preserving existing content, edit scope, cancellation and Responses API contract tests. To explicitly test a live signed-in Codex account, run `node scripts/assistant.test.cjs --live`. `/__assistant-ui/` on the localhost dev server then exposes a clearly marked UI fixture using the resulting proposal to check review/apply/undo without another inference call. Neither fixture ships to production.
 
