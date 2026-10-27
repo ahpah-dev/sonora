@@ -2,13 +2,13 @@
       const studioPreferencesKey = 'sonora-studio-preferences-v2';
       let studioPrefs = { theme:'carbon', accent:'#c1f280', density:76, browser:true, inspector:true, editor:true, sampleRate:44100 };
       try { studioPrefs = {...studioPrefs,...JSON.parse(localStorage.getItem(studioPreferencesKey)||'{}')}; } catch (_) {}
-      const studioChannels = new Map(), studioSources = new Set();
-      let studioMasterMeter = null, studioPresetCategory='All', microphoneTake=null, microphonePending=false, playbackPending=false;
+      const studioChannels = new Map(), studioSources = new Set(), studioMasterData = new Float32Array(256);
+      let studioMasterMeter = null, studioPresetCategory='All', microphoneTake=null, microphonePending=false, playbackPending=false, studioBatchDepth=0, studioPlayheadFrame=0;
       project.swing = clamp(finiteNumber(project.swing,0),0,.6);
       function studioSampleIds(snapshot=project) { return [...new Set(snapshot.tracks.flatMap(t=>[t.sampleId,...t.clips.map(c=>c.sampleId)]).filter(Boolean))]; }
       function studioEdit(action, rerender=true) {
         const before=JSON.stringify(project); action(); pushUndoSnapshot(before); setDirty();
-        if(rerender){renderTracks();renderArrangement();renderEditor();} syncAudioMix();
+        if(rerender){studioBatchDepth++;try{renderTracks();renderArrangement();}finally{studioBatchDepth--;}renderEditor();} syncAudioMix();
       }
       function studioApplyPreferences() {
         document.body.dataset.theme=studioPrefs.theme;
@@ -180,10 +180,10 @@
         studioApplyPreferences();studioRenderBrowser();
       }
       // Wrap renderers so all project changes keep the new workspace in sync.
-      const studioBaseTracks=renderTracks;renderTracks=function(){studioBaseTracks();studioRenderInspector();};
-      const studioBaseArrangement=renderArrangement;renderArrangement=function(){studioBaseArrangement();studioRenderInspector();};
+      const studioBaseTracks=renderTracks;renderTracks=function(){studioBaseTracks();if(!studioBatchDepth)studioRenderInspector();};
+      const studioBaseArrangement=renderArrangement;renderArrangement=function(){studioBaseArrangement();if(!studioBatchDepth)studioRenderInspector();};
       const studioBasePreview=clipPreviewMarkup;clipPreviewMarkup=function(track,clip){if(track.type!=='audio')return studioBasePreview(track,clip);const peaks=clip.peaks||[],count=100,total=clip.sourceDuration||1,begin=(clip.offset||0)/total,portion=clip.length*60/project.tempo/total;let lines='';for(let i=0;i<count;i++){const peak=peaks[Math.floor((begin+i/count*portion)*peaks.length)]||0;lines+=`M${i} ${10-peak*9}v${peak*18} `;}return `<svg viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true"><path d="${lines}" fill="none" stroke="${/^#[0-9a-f]{6}$/i.test(track.color)?track.color:'#65d9cf'}" stroke-width=".65"/></svg>`;};
-      const studioBaseEditor=renderEditor;renderEditor=function(){const track=getTrack();if(track.type==='audio'&&editorTab==='piano')editorTab='audio';if(editorTab!=='audio'&&editorTab!=='automation'){studioBaseEditor();}else{editorBodyEl.replaceChildren();$('#noteToolbar').style.display='none';$('#noteLength').style.display='none';$('#clearPatternButton').style.display='none';document.querySelectorAll('.editor-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===editorTab));$('#editorTrackName').textContent=track.name;if(editorTab==='audio')studioRenderAudio(track,selectedClipFor(track));else studioRenderAutomation(track);updateStatus();}studioRenderInspector();};
+      const studioBaseEditor=renderEditor;renderEditor=function(){const track=getTrack();if(track.type==='audio'&&editorTab==='piano')editorTab='audio';if(editorTab!=='audio'&&editorTab!=='automation'){studioBaseEditor();}else{editorBodyEl.replaceChildren();$('#noteToolbar').style.display='none';$('#noteLength').style.display='none';$('#clearPatternButton').style.display='none';document.querySelectorAll('.editor-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===editorTab));$('#editorTrackName').textContent=track.name;if(editorTab==='audio')studioRenderAudio(track,selectedClipFor(track));else studioRenderAutomation(track);updateStatus();}if(!studioBatchDepth)studioRenderInspector();};
       const studioBaseMix=syncAudioMix;syncAudioMix=function(){studioBaseMix();if(!audio.context)return;for(const track of project.tracks){const channel=studioChannels.get(track.id);channel?.pan.pan.setTargetAtTime(clamp(finiteNumber(track.pan,0),-1,1),audio.context.currentTime,.02);}};
       rebuildEffectsRouting=function(){if(!audio.context||!audio.master)return;for(const c of studioChannels.values()){c.pan.disconnect();c.meter.disconnect();}studioChannels.clear();
         for(const track of project.tracks){const channel=audio.trackNodes.get(track.id);if(!channel)continue;
@@ -203,8 +203,26 @@
         for(const track of project.tracks){const hasSolo=project.tracks.some(t=>t.solo),audible=!track.mute&&(!hasSolo||track.solo);audio.trackNodes.get(track.id)?.gain.setTargetAtTime(audible?track.volume*studioAutomationValue(track,((current%len)+len)%len):0,ctx.currentTime,.008);
           if(track.type!=='audio')continue;for(let loop=cycle;loop<=cycle+(project.loop?1:0);loop++)for(const clip of track.clips){const absolute=loop*len+clip.start,key=`audio:${loop}:${clip.id}`,time=audio.startTime+(absolute-audio.startedAtBeat)*spb;if(audio.scheduled.has(key)||time>ctx.currentTime+.12)continue;const elapsed=Math.max(0,ctx.currentTime-time);if(elapsed>=clip.length*spb)continue;audio.scheduled.add(key);studioAudioVoice(ctx,audio.trackNodes.get(track.id),clip,Math.max(time,ctx.currentTime),elapsed,true);}}
       };
-      const studioBaseStart=startPlayback;startPlayback=async function(){if(audio.playing||playbackPending)return;playbackPending=true;try{await studioBaseStart();}finally{playbackPending=false;}};
-      const studioBaseStop=stopPlayback;stopPlayback=function(reset=true){studioStopSources();studioBaseStop(reset);if(microphoneTake?.recorder.state==='recording')microphoneTake.recorder.stop();};
+      function studioSmoothPlayhead(){
+        studioPlayheadFrame=0;if(!audio.playing||!audio.context)return;
+        const now=audio.context.currentTime,counting=audio.countInStart!==null&&now<audio.startTime;
+        if(!counting){
+          const spb=60/project.tempo,current=audio.startedAtBeat+(now-audio.startTime)/spb;
+          const beat=typeof sessionPosition==='function'?sessionPosition(current):(project.loop?((current%arrangementBeats())+arrangementBeats())%arrangementBeats():current);
+          audio.playheadBeat=clamp(beat,0,arrangementBeats());
+          const playhead=$('#playhead');if(playhead)playhead.style.left=`${audio.playheadBeat/arrangementBeats()*100}%`;
+          const line=$('.pro-roll-playhead'),grip=$('.pro-roll-playhead-grip'),clip=selectedClipFor();
+          if(line&&grip){
+            const relative=audio.playheadBeat-(clip?.start||0),position=((relative%16)+16)%16,visible=Boolean(clip)&&relative>=0&&relative<clip.length;
+            line.hidden=!visible;if(visible)line.style.left=`${position/16*100}%`;
+            const width=Math.max(640,(proRoll?.workspaceWidth||$('.piano-workspace')?.clientWidth||700)-58)*(proRoll?.zoom||1);
+            grip.style.left=`${58+position/16*width}px`;
+          }
+        }
+        studioPlayheadFrame=requestAnimationFrame(studioSmoothPlayhead);
+      }
+      const studioBaseStart=startPlayback;startPlayback=async function(){if(audio.playing||playbackPending)return;playbackPending=true;try{await studioBaseStart();if(audio.playing&&!studioPlayheadFrame)studioPlayheadFrame=requestAnimationFrame(studioSmoothPlayhead);}finally{playbackPending=false;}};
+      const studioBaseStop=stopPlayback;stopPlayback=function(reset=true){cancelAnimationFrame(studioPlayheadFrame);studioPlayheadFrame=0;studioStopSources();studioBaseStop(reset);if(microphoneTake?.recorder.state==='recording')microphoneTake.recorder.stop();};
       const studioBaseSeek=seekToBeat;seekToBeat=function(beat){studioStopSources();return studioBaseSeek(beat);};
       const studioBaseSound=openSoundBrowser;openSoundBrowser=function(){if(getTrack().type==='audio'){editorTab='audio';renderEditor();return;}studioBaseSound();};
       const studioBaseEmpty=makeEmptyClip;makeEmptyClip=function(track,start,length=16,name){if(track.type==='audio'){notify('Import audio or record into this track');return {id:`empty-${Date.now()}`,name:name||'Empty audio region',start,length,peaks:[]};}return studioBaseEmpty(track,start,length,name);};
@@ -213,8 +231,9 @@
       // Saving after import happens through the existing debounced project autosave.
       $('#tempoInput').addEventListener('change',event=>{if(microphoneTake){event.stopImmediatePropagation();event.target.value=microphoneTake.tempo;notify('Finish the take before changing tempo');}},{capture:true});
       $('.app').addEventListener('click',event=>{if((microphoneTake||microphonePending)&&event.target.closest('#openProjectButton')){event.stopImmediatePropagation();notify('Finish the recording before opening a project');}},{capture:true});
-      renderMixerMeters=function(){const mixer=editorBodyEl.querySelector('.mixer');for(const [index,track] of project.tracks.entries()){const c=studioChannels.get(track.id);let peak=0;if(c){c.meter.getFloatTimeDomainData(c.data);for(const v of c.data)peak=Math.max(peak,Math.abs(v));}const fill=mixer?.children[index]?.querySelector('.meter-fill');if(fill)fill.style.setProperty('--meter-level',`${peak>.001?clamp((20*Math.log10(peak)+60)/60*100,0,100):0}%`);}
-        if(studioMasterMeter){const data=new Float32Array(256);studioMasterMeter.getFloatTimeDomainData(data);const peak=data.reduce((max,v)=>Math.max(max,Math.abs(v)),0),level=peak>.001?clamp((20*Math.log10(peak)+60)/60*100,0,100):0;const fill=mixer?.lastElementChild.querySelector('.meter-fill');if(fill)fill.style.setProperty('--meter-level',`${level}%`);$('#cpuStatus').textContent=peak>=1?'Output clipping':peak>.001?`Peak ${(20*Math.log10(peak)).toFixed(1)} dB`:'Audio idle';}
+      renderMixerMeters=function(){const mixer=editorBodyEl.querySelector('.mixer'),activeAudio=audio.playing||studioSources.size>0||activeLiveNotes.size>0;
+        if(mixer){for(const [index,track] of project.tracks.entries()){const c=studioChannels.get(track.id);let peak=0;if(c&&activeAudio){c.meter.getFloatTimeDomainData(c.data);for(let i=0;i<c.data.length;i++){const v=Math.abs(c.data[i]);if(v>peak)peak=v;}}const fill=mixer.children[index]?.querySelector('.meter-fill');if(fill)fill.style.setProperty('--meter-level',`${peak>.001?clamp((20*Math.log10(peak)+60)/60*100,0,100):0}%`);}}
+        if(studioMasterMeter){let peak=0;if(activeAudio||mixer){studioMasterMeter.getFloatTimeDomainData(studioMasterData);for(let i=0;i<studioMasterData.length;i++){const v=Math.abs(studioMasterData[i]);if(v>peak)peak=v;}}const level=peak>.001?clamp((20*Math.log10(peak)+60)/60*100,0,100):0;const fill=mixer?.lastElementChild?.querySelector('.meter-fill');if(fill)fill.style.setProperty('--meter-level',`${level}%`);$('#cpuStatus').textContent=peak>=1?'Output clipping':peak>.001?`Peak ${(20*Math.log10(peak)).toFixed(1)} dB`:'Audio idle';}
         if($('#studioRateStatus'))$('#studioRateStatus').textContent=audio.context?`${(audio.context.sampleRate/1000).toFixed(1)} kHz`:'Web Audio';if($('#studioEngineStatus'))$('#studioEngineStatus').textContent=microphoneTake?`Recording · ${Math.floor((performance.now()-microphoneTake.started)/1000)}s`:audio.playing?'Audio engine running':'Audio engine ready';
       };
       const studioBaseMixer=renderMixer;renderMixer=function(){studioBaseMixer();const channels=editorBodyEl.querySelector('.mixer').children;project.tracks.forEach((track,i)=>{channels[i].style.setProperty('--channel-color',track.color);const input=document.createElement('input');input.type='range';input.min=-1;input.max=1;input.step=.01;input.value=track.pan||0;input.className='mixer-pan';input.setAttribute('aria-label',`${track.name} pan`);let before;input.addEventListener('focus',()=>before=JSON.stringify(project));input.addEventListener('input',()=>{before??=JSON.stringify(project);track.pan=Number(input.value);syncAudioMix();setDirty();});input.addEventListener('change',()=>{pushUndoSnapshot(before);before=null;studioRenderInspector();});channels[i].append(input);});renderMixerMeters();};

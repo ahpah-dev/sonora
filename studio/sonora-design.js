@@ -31,7 +31,7 @@
         document.querySelectorAll('.preset-symbol').forEach(symbol=>{if(symbol.querySelector('svg'))return;const category=symbol.closest('.preset-card').querySelector('small')?.textContent||'';symbol.replaceChildren(designIcon(category==='Drums'?'drums':category==='Keys'||category==='Organ'?'piano':'wave'));});
         document.querySelectorAll('.pro-preset-action[aria-label^="Preview"]').forEach(button=>{if(!button.dataset.designIcon){button.replaceChildren(designIcon('play'));button.dataset.designIcon='play';}});
         document.querySelectorAll('.editor-tab').forEach(button=>designButton(button,{piano:'piano',drums:'drums',perform:'play',instrument:'knobs',mixer:'knobs',fx:'spark',automation:'wave',audio:'wave'}[button.dataset.tab]));
-        const inspector=$('#studioInspector');if(inspector){const name=inspector.querySelector('.inspector-name');if(name)name.style.setProperty('--channel-color',getTrack().color);const shortcut=inspector.querySelector('.pro-instrument-shortcut');if(shortcut){shortcut.querySelector('small').textContent=getTrack().type==='drums'?'Drum instrument':proSynth(getTrack()).engine==='piano'?'Piano instrument':proSynth(getTrack()).engine==='acoustic'?'Recorded instrument':'Synth instrument';const button=shortcut.querySelector('button');button.textContent='Edit instrument';designButton(button,'knobs');}const overline=inspector.querySelector('.inspector-overline');if(overline){overline.textContent='Track inspector';const close=studioButton('',()=>designTogglePanel('inspector',false),'icon-button design-panel-close');close.setAttribute('aria-label','Hide track inspector');close.title='Hide track inspector';designButton(close,'close');overline.append(close);}}
+        const inspector=$('#studioInspector');if(inspector){const name=inspector.querySelector('.inspector-name');if(name)name.style.setProperty('--channel-color',getTrack().color);const shortcut=inspector.querySelector('.pro-instrument-shortcut');if(shortcut){shortcut.querySelector('small').textContent=getTrack().type==='drums'?'Drum instrument':proSynth(getTrack()).engine==='piano'?'Piano instrument':proSynth(getTrack()).engine==='acoustic'?'Recorded instrument':'Synth instrument';const button=shortcut.querySelector('button');button.textContent='Edit instrument';designButton(button,'knobs');}const overline=inspector.querySelector('.inspector-overline');if(overline&&!overline.querySelector('.design-panel-close')){overline.textContent='Track inspector';const close=studioButton('',()=>designTogglePanel('inspector',false),'icon-button design-panel-close');close.setAttribute('aria-label','Hide track inspector');close.title='Hide track inspector';designButton(close,'close');overline.append(close);}}
         designRefreshCategories();
         $('.performance-top p')?.replaceChildren(document.createTextNode('Play with your computer keyboard, on-screen keys, or MIDI input.'));
         const state=$('#performanceNow');if(state?.textContent==='Ready when you are')state.textContent='No active notes';
@@ -74,11 +74,13 @@
         designDecorate();
         designSyncPanels();
       }
-      const designBaseEditor=renderEditor;renderEditor=function(){designBaseEditor();designDecorate();};
-      const designBaseTracks=renderTracks;renderTracks=function(){designBaseTracks();designDecorate();};
-      const designBaseArrangement=renderArrangement;renderArrangement=function(){designBaseArrangement();gridEl.style.backgroundImage=gridEl.style.backgroundImage.replaceAll('rgb(44, 46, 51)','rgba(255,255,255,.055)').replaceAll('rgb(32, 34, 39)','rgba(255,255,255,.025)').replaceAll('rgb(27, 29, 33)','rgba(255,255,255,.012)');};
-      const designBaseBrowser=studioRenderBrowser;studioRenderBrowser=function(){designBaseBrowser();designDecorate();};
-      const designBaseInspector=studioRenderInspector;studioRenderInspector=function(){designBaseInspector();designDecorate();};
+      let designDecorateDepth=0;
+      function designWithDecorate(fn){return function(...args){designDecorateDepth++;try{return fn.apply(this,args);}finally{if(--designDecorateDepth===0)designDecorate();}};}
+      renderEditor=designWithDecorate(renderEditor);
+      renderTracks=designWithDecorate(renderTracks);
+      const designBaseArrangement=renderArrangement;renderArrangement=function(){designDecorateDepth++;try{designBaseArrangement();gridEl.style.backgroundImage=gridEl.style.backgroundImage.replaceAll('rgb(44, 46, 51)','rgba(255,255,255,.055)').replaceAll('rgb(32, 34, 39)','rgba(255,255,255,.025)').replaceAll('rgb(27, 29, 33)','rgba(255,255,255,.012)');}finally{if(--designDecorateDepth===0)designDecorate();}};
+      studioRenderBrowser=designWithDecorate(studioRenderBrowser);
+      studioRenderInspector=designWithDecorate(studioRenderInspector);
       const designBasePreferences=studioApplyPreferences;studioApplyPreferences=function(){designBasePreferences();for(const key of ['browser','inspector'])if(!studioPrefs[key])(key==='browser'?$('.studio-browser'):$('#studioInspector'))?.classList.remove('design-panel-open');designSyncPanels();};
       if(window.sonoraDesktop){
         document.body.classList.add('sonora-desktop');
