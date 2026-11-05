@@ -2,6 +2,18 @@
 const fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path'),{spawn}=require('node:child_process');
 function makeEngine({binary,assistant,notify=()=>{},readApiKey=()=>null,fetchImpl=fetch}){
   let active=null;
+  function parseProposalJson(text){
+    if(!text||typeof text!=='string')throw Error('The assistant returned an empty proposal');
+    const trimmed=text.trim();
+    try{return JSON.parse(trimmed);}catch(_){}
+    const fenced=trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if(fenced){try{return JSON.parse(fenced[1].trim());}catch(_){}}
+    const first=trimmed.indexOf('{'),last=trimmed.lastIndexOf('}');
+    if(first>=0&&last>first){
+      try{return JSON.parse(trimmed.slice(first,last+1));}catch(_){}
+    }
+    throw Error('The assistant returned an invalid JSON proposal. Try again.');
+  }
   const configuration=['--ignore-user-config','--ignore-rules','-c','approval_policy="never"','-c','web_search="disabled"','-c','features.shell_tool=false','-c','features.plugins=false','-c','features.apps=false','-c','features.multi_agent=false','-c','features.computer_use=false','-c','features.image_generation=false','-c','features.code_mode_host=false','-c','mcp_servers={}'];
   function child(args,options={}){return spawn(binary,args,{windowsHide:true,stdio:['pipe','pipe','pipe'],...options});}
   async function status(){try{return await new Promise(resolve=>{const process=child(['login','status']);let text='';const timer=setTimeout(()=>{process.kill();resolve({connected:false});},10000);process.stdout.on('data',b=>text+=b);process.stderr.on('data',b=>text+=b);process.on('error',()=>{clearTimeout(timer);resolve({connected:false});});process.on('close',code=>{clearTimeout(timer);resolve({connected:code===0&&/logged in/i.test(text),method:/ChatGPT/i.test(text)?'ChatGPT':'Codex'});});});}catch{return {connected:false};}}
@@ -23,14 +35,94 @@ function makeEngine({binary,assistant,notify=()=>{},readApiKey=()=>null,fetchImp
   }
   async function generate(request){
     if(active)throw Error('A request is already running');
-    if(!request||!['codex','api'].includes(request.provider))throw Error('Choose Codex or OpenAI API');
+    if(!request||!['codex','api','9router'].includes(request.provider))throw Error('Choose Codex, OpenAI API or 9Router');
     const input=assistant.prompt(request);const job={cancelled:false};active=job;let folder;
     let lastPhase='',lastOutputAt=0;
     const progress=(phase,message,characters)=>{if(job.cancelled)return;const now=Date.now();if(phase===lastPhase&&characters!==undefined&&now-lastOutputAt<250)return;lastPhase=phase;lastOutputAt=now;notify({kind:'progress',phase,message,...(characters===undefined?{}:{characters})});};
-    progress('connecting','Connecting to OpenAI…');
+    progress('connecting',request.provider==='9router'?'Connecting to 9Router…':'Connecting to OpenAI…');
     try{
       let raw;
-      if(request.provider==='api'){
+      if(request.provider==='9router'){
+        const endpoint=(request.endpoint||'http://localhost:20128/v1').replace(/\/+$/,'');
+        const apiKey=request.apiKey||'';
+        const controller=job.controller=new AbortController(),timer=setTimeout(()=>controller.abort(),600000);
+        try{
+          const headers={'Content-Type':'application/json'};
+          if(apiKey&&apiKey.trim())headers.Authorization=`Bearer ${apiKey.trim()}`;
+          else headers.Authorization='Bearer 9router';
+          const model=request.model||'auto';
+          const bodyPayload={
+            model,
+            messages:[
+              {role:'system',content:"You are Sonora's music producer. Compose an intentional, playable arrangement in the required JSON schema. Reply with valid JSON only."},
+              {role:'user',content:input}
+            ],
+            temperature:0.7,
+            response_format:{type:'json_object'},
+            stream:true
+          };
+          let response;
+          try{
+            response=await fetchImpl(`${endpoint}/chat/completions`,{
+              method:'POST',
+              headers,
+              body:JSON.stringify(bodyPayload),
+              signal:controller.signal
+            });
+          }catch(networkErr){
+            if(job.cancelled)throw Error('Request cancelled');
+            throw Error(`Could not connect to 9Router at ${endpoint}. Make sure 9Router is running (run '9router' in your terminal).`);
+          }
+          if(!response.ok){
+            if(response.status===401||response.status===403)throw Error('9Router authentication failed. Check your 9Router API key if configured.');
+            if(response.status===404)throw Error(`9Router endpoint not found at ${endpoint}/chat/completions. Verify your 9Router URL.`);
+            if(response.status===429)throw Error('9Router rate limit reached on active provider. 9Router will auto-fallback or check your quota.');
+            const errText=await response.text().catch(()=>'');
+            throw Error(`9Router request failed (${response.status}): ${errText.slice(0,200)||response.statusText}`);
+          }
+          let text='';
+          if(response.headers?.get('content-type')?.includes('text/event-stream')&&response.body?.getReader){
+            const reader=response.body.getReader(),decoder=new TextDecoder();let pending='',characters=0,total=0;
+            progress('composing','Composing your music with 9Router…');
+            function parseChunk(frame){
+              const payload=frame.split(/\r?\n/).filter(line=>line.startsWith('data:')).map(line=>line.slice(5).trimStart()).join('\n');
+              if(!payload||payload==='[DONE]')return;
+              try{
+                const json=JSON.parse(payload);
+                const delta=json.choices?.[0]?.delta?.content||json.choices?.[0]?.text||'';
+                if(delta){
+                  text+=delta;
+                  characters+=delta.length;
+                  progress('writing','Writing notes, clips and instrument settings…',characters);
+                }
+              }catch(_){}
+            }
+            try{
+              while(true){
+                const {done,value}=await reader.read();
+                if(job.cancelled)throw Error('Request cancelled');
+                if(done){pending+=decoder.decode();break;}
+                total+=value.length;
+                if(total>8000000)throw Error('The assistant response was too large');
+                pending+=decoder.decode(value,{stream:true});
+                let match;
+                while((match=/\r?\n\r?\n/.exec(pending))){
+                  parseChunk(pending.slice(0,match.index));
+                  pending=pending.slice(match.index+match[0].length);
+                }
+              }
+              if(pending.trim())parseChunk(pending);
+            }finally{
+              await reader.cancel().catch(()=>{});reader.releaseLock();
+            }
+          }else{
+            const json=await response.json();
+            text=json.choices?.[0]?.message?.content||json.choices?.[0]?.text||'';
+          }
+          if(!text)throw Error('9Router returned an empty response. Try a different model in 9Router.');
+          raw=parseProposalJson(text);
+        }finally{clearTimeout(timer);}
+      }else if(request.provider==='api'){
         const key=readApiKey();if(!key)throw Error('Connect your OpenAI API key first');
         const controller=job.controller=new AbortController(),timer=setTimeout(()=>controller.abort(),600000);
         try{

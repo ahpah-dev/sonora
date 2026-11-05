@@ -51,6 +51,18 @@ async function run(){
   const limited=makeEngine({binary:'unused',assistant,readApiKey:()=> 'test-key',fetchImpl:async()=>({ok:false,status:429})});await assert.rejects(()=>limited.generate(request),/usage or rate limit/);
   let abortStarted;const starting=new Promise(r=>abortStarted=r);const slow=makeEngine({binary:'unused',assistant,readApiKey:()=> 'test-key',fetchImpl:(_url,{signal})=>new Promise((_resolve,reject)=>{abortStarted();signal.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')));})});const pending=slow.generate(request);await starting;await assert.rejects(()=>slow.generate(request),/already running/);assert(slow.cancel());await assert.rejects(()=>pending,/cancelled/);
   console.log('PASS assistant model/effort allowlist, typed MIDI/drum proposals, instrument controls, preservation, privacy, bounds, scope, Responses contract, incomplete/error handling and cancellation');
+  const nineRequest={provider:'9router',endpoint:'http://localhost:20128/v1',model:'auto',effort:'none',scope:'add',prompt:'Add a piano theme',context};let nineOutgoing;
+  const nineEngine=makeEngine({binary:'unused',assistant,fetchImpl:async(url,options)=>{assert.equal(url,'http://localhost:20128/v1/chat/completions');nineOutgoing=JSON.parse(options.body);return {ok:true,headers:new Headers({'content-type':'application/json'}),json:async()=>({choices:[{message:{content:JSON.stringify(plan)}}]})};}});
+  const ninePlan=await nineEngine.generate(nineRequest);assert.equal(ninePlan.tracks.length,1);assert.equal(nineOutgoing.model,'auto');assert.equal(nineOutgoing.messages.length,2);
+  const nineActivity=[];
+  function streamChatResponse(deltas){const events=deltas.map(d=>({choices:[{delta:{content:d}}]}));const lines=events.map(e=>'data: '+JSON.stringify(e)+'\r\n\r\n').join('')+'data: [DONE]\r\n\r\n';return new Response(new TextEncoder().encode(lines),{headers:{'content-type':'text/event-stream'}});}
+  const nineStreaming=makeEngine({binary:'unused',assistant,notify:event=>nineActivity.push(event),fetchImpl:async()=>streamChatResponse(['{"summary":',' "Free piano ♫", "title":null, "tempo":null, "tracks":[',JSON.stringify(added),']','}']) });
+  assert.equal((await nineStreaming.generate(nineRequest)).summary,'Free piano ♫');assert(nineActivity.some(e=>e.phase==='writing'&&e.characters>0));
+  const fencedEngine=makeEngine({binary:'unused',assistant,fetchImpl:async()=>({ok:true,headers:new Headers({'content-type':'application/json'}),json:async()=>({choices:[{message:{content:'```json\n'+JSON.stringify(plan)+'\n```'}}]})})});
+  assert.equal((await fencedEngine.generate(nineRequest)).tracks.length,1);
+  const nineFail=makeEngine({binary:'unused',assistant,fetchImpl:async()=>({ok:false,status:404,statusText:'Not Found',text:async()=>'Endpoint not found'})});
+  await assert.rejects(()=>nineFail.generate(nineRequest),/9Router endpoint not found/);
+  console.log('PASS 9Router free AI chat completions, SSE streaming, fenced JSON extraction and endpoint validation');
   if(process.argv.includes('--live')){
     const live=makeEngine({binary:path.resolve(__dirname,'../desktop/node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe'),assistant,notify:event=>console.log(event.kind)});
     const status=await live.status();assert(status.connected,'A local Codex sign-in is required for this explicit live integration test');

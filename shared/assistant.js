@@ -5,6 +5,15 @@
     {id:'gpt-6-astra',name:'GPT-6 Astra',efforts:['low','medium','high','xhigh','max']},
     {id:'gpt-6-luna',name:'GPT-6 Luna',efforts:['none','low','medium','high','xhigh','max']}
   ];
+  const nineRouterModels=[
+    {id:'auto',name:'9Router Auto (Smart Fallback)',efforts:['none','low','medium','high']},
+    {id:'free',name:'9Router Free (Free Tier)',efforts:['none','low','medium','high']},
+    {id:'gemini-2.5-flash',name:'Gemini 2.5 Flash',efforts:['none','low','medium','high']},
+    {id:'meta-llama/llama-3.3-70b-instruct',name:'Llama 3.3 70B',efforts:['none','low','medium','high']},
+    {id:'deepseek-chat',name:'DeepSeek Chat',efforts:['none','low','medium','high']},
+    {id:'claude-3-5-sonnet',name:'Claude 3.5 Sonnet',efforts:['none','low','medium','high']},
+    {id:'custom',name:'Custom Model…',efforts:['none','low','medium','high']}
+  ];
   const lanes=['kick','snare','hat','openHat','clap','tom','rim'];
   const parameterRanges={cutoff:[120,18000],resonance:[.1,12],attack:[.002,2],decay:[.002,2],sustain:[0,1],release:[.01,3],octave:[-2,2],detune:[-50,50],width:[0,1],drive:[0,1],pianoTone:[0,1],pianoHammer:[0,1],pianoBody:[0,1],pianoDecay:[1,10],pianoRelease:[.05,1.5],pianoDynamics:[.5,2],pianoAttack:[.002,.04],sampleTone:[0,1],sampleBody:[0,1],sampleDynamics:[.5,2],sampleLevel:[.25,1.5]};
   const object=properties=>({type:'object',additionalProperties:false,properties,required:Object.keys(properties)});
@@ -13,10 +22,25 @@
   const clipSchema=object({name:{type:'string'},start:{type:'number',description:'Absolute arrangement position in quarter-note beats.'},length:{type:'number',description:'Playback length in quarter-note beats. MIDI repeats every 16 beats; drums repeat every 4 beats.'},notes:{type:'array',items:noteSchema},steps:object(Object.fromEntries(lanes.map(lane=>[lane,{type:'array',items:{type:'integer'},description:'Sixteenth indices 0–15 inside a one-bar drum phrase; empty for instrument clips.'}])))});
   const schema=object({summary:{type:'string'},title:nullable('string'),tempo:nullable('number'),tracks:{type:'array',items:object({action:{type:'string',enum:['add','update','remove']},trackId:nullable('string'),name:nullable('string'),instrument:nullable('string'),volume:nullable('number'),pan:nullable('number'),mute:nullable('boolean'),effectPreset:nullable('string'),parameters:{type:'array',items:object({name:{type:'string',enum:Object.keys(parameterRanges)},value:{type:'number'}})},clips:{type:['array','null'],items:clipSchema}})}});
   function fail(message){throw new Error(message);}
+  function parseProposalJson(text){
+    if(!text||typeof text!=='string')fail('The assistant returned an empty proposal');
+    const trimmed=text.trim();
+    try{return JSON.parse(trimmed);}catch(_){}
+    const fenced=trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if(fenced){try{return JSON.parse(fenced[1].trim());}catch(_){}}
+    const first=trimmed.indexOf('{'),last=trimmed.lastIndexOf('}');
+    if(first>=0&&last>first){
+      try{return JSON.parse(trimmed.slice(first,last+1));}catch(_){}
+    }
+    fail('The assistant returned an invalid JSON proposal. Try again.');
+  }
   function number(value,min,max,label,integer=false){if(typeof value!=='number'||!Number.isFinite(value)||value<min||value>max||(integer&&!Number.isInteger(value)))fail(`Invalid ${label}`);return value;}
   function string(value,max,label){if(typeof value!=='string'||value.length>max)fail(`Invalid ${label}`);return value;}
   function array(value,max,label){if(!Array.isArray(value)||value.length>max)fail(`Invalid ${label}`);return value;}
-  function selection(model,effort){const entry=models.find(m=>m.id===model);if(!entry||!entry.efforts.includes(effort))fail('Choose a supported GPT-6 or GPT-6.1 model and reasoning effort');return entry;}
+  function selection(model,effort,provider){
+    if(provider==='9router'||model==='auto'||model==='free'||nineRouterModels.some(m=>m.id===model))return {id:model||'auto',name:model||'9Router',efforts:['none','low','medium','high']};
+    const entry=models.find(m=>m.id===model);if(!entry||!entry.efforts.includes(effort))fail('Choose a supported GPT-6 or GPT-6.1 model and reasoning effort');return entry;
+  }
   function creativeBrief(raw={}){
     if(!raw||typeof raw!=='object'||Array.isArray(raw))fail('Invalid creative brief');
     const choice=(name,values)=>{const value=raw[name]??'auto';if(!values.includes(value))fail(`Invalid creative ${name}`);return value;};
@@ -100,7 +124,7 @@
     const contextClips=track=>{const clips=track.clips.slice(0,32),selected=track.clips.find(c=>c.id===project.selectedClip);if(selected&&!clips.includes(selected))clips[31]=selected;return clips;};
     return {title:project.title,tempo:project.tempo,swing:project.swing||0,masterVolume:project.masterVolume??.82,selectedTrack:project.selectedTrack,selectedClip:project.selectedClip,tracks:project.tracks.map(t=>({id:t.id,name:t.name,type:t.type,instrument:t.instrument,volume:t.volume,pan:t.pan||0,mute:t.mute,solo:Boolean(t.solo),parameters:Object.fromEntries(Object.keys(parameterRanges).filter(key=>Number.isFinite(t.synth?.[key])).map(key=>[key,t.synth[key]])),clips:contextClips(t).map(c=>({id:c.id,name:c.name,start:c.start,length:c.length,notes:t.type==='synth'?(c.notes||t.notes||[]).slice(0,256):[],steps:t.type==='drums'?(c.steps||t.steps):null}))})),catalog:{instruments:catalog.instruments.map(p=>({name:p.name,kind:p.kind,category:p.category,description:p.description||'',sound:p.synth?{engine:p.synth.engine||'synth',octave:p.synth.octave||0,attack:p.synth.attack,release:p.synth.release,...(p.synth.sampleBank?{sampleBank:p.synth.sampleBank}:{}),...(p.midiRange||p.synth.midiRange?{midiRange:p.midiRange||p.synth.midiRange}:{})}:null})),effects:catalog.effects.map(p=>({name:p.name})),parameters:parameterRanges}};
   }
-  function prompt(request){selection(request.model,request.effort);string(request.prompt,6000,'prompt');if(!request.prompt.trim())fail('Describe the music you want to make');
+  function prompt(request){selection(request.model,request.effort,request.provider);string(request.prompt,6000,'prompt');if(!request.prompt.trim())fail('Describe the music you want to make');
     if(!['arrange','selected','add'].includes(request.scope))fail('Invalid editing scope');
     const context={...request.context};if(context.creativeBrief)context.creativeBrief=creativeBrief(context.creativeBrief);
     if(context.editTarget){const target=context.editTarget,track=context.tracks?.find(t=>t.id===target.trackId);if(target.kind!=='clip'||request.scope!=='selected'||target.trackId!==context.selectedTrack||track?.type==='audio'||!track?.clips?.some(c=>c.id===target.clipId))fail('Select an instrument or drum clip for focused editing.');}
@@ -119,8 +143,10 @@ ENGINE AND OUTPUT
 Use only supplied factory instruments and effect presets. Return null for unchanged title, tempo and settings. Update/remove uses exact existing trackId; add uses null trackId. All fields are required. Existing audio instruments and clips cannot be replaced. Volume 0..1, pan -1..1, tempo 40..240. Clip start/length are quarter-note beats; 4 beats = 1 bar.
 Piano/synth clips repeat their pattern every 16 beats (4 bars): note start 0..15.95, duration >=.05 and within clip end, pitch 0..127, velocity .01..1. Write separate non-overlapping clips for A, A variation, B and ending phrases. A clip longer than 16 beats repeats EXACTLY, so do not use a single long clip when development is requested. Drum clips repeat every 4 beats (1 bar): sixteenth step indices 0..15; lanes kick/snare/hat/openHat/clap/tom/rim, empty notes. A bar-4 fill requires its own 4-beat drum clip at that bar, replacing that bar's groove clip; it cannot be encoded inside a 16-beat drum pattern. Keep shared section boundaries and deliberate kick/bass relationships. Non-drums have empty step arrays for ALL seven lanes. Maximum 16 changed tracks, 32 clips per track, 256 notes per clip, 4096 notes total.
 Before returning, check actual repeated playback: length, motif continuity, harmony/bass alignment, phrase contrast, note collisions, sounding register, ending and headroom. Keep the summary brief and professional; describe the musical choices and duration, not unverified quality claims.
+OUTPUT FORMAT: Output ONLY a single raw valid JSON object matching the schema with no surrounding text or markdown code fences:
+{"summary":"...","title":null,"tempo":null,"tracks":[{"action":"add"|"update"|"remove","trackId":null,"name":"...","instrument":"...","volume":0.65,"pan":0,"mute":false,"effectPreset":null,"parameters":[],"clips":[{"name":"...","start":0,"length":16,"notes":[{"pitch":60,"start":0,"duration":1,"velocity":0.8}],"steps":{"kick":[],"snare":[],"hat":[],"openHat":[],"clap":[],"tom":[],"rim":[]}}]}]}
 SCOPE=${request.scope}: ${request.scope==='selected'?'Only update the selected track; do not add or remove tracks.':request.scope==='add'?'Only add tracks; preserve title and tempo.':'Arrange or edit the current session as requested.'}
 PROJECT CONTEXT:\n${data}\nMUSIC REQUEST:\n${request.prompt}`;
   }
-  return {models,lanes,parameterRanges,schema,selection,creativeBrief,checkScope,validatePlan,applyPlan,musicalSnapshot,context,prompt};
+  return {models,nineRouterModels,lanes,parameterRanges,schema,selection,creativeBrief,checkScope,validatePlan,applyPlan,musicalSnapshot,context,prompt,parseProposalJson};
 });

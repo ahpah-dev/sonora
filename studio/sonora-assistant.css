@@ -21,6 +21,11 @@
 .assistant-motif-option input { accent-color:var(--mint);margin:0; }
 .assistant-brief > p { font-size:10px;line-height:1.5;color:#859fa9;margin:8px 0 0; }
 #assistantScopeHint { margin-top:-7px;margin-bottom:16px; }
+#assistantNineRouterControls { margin-top:10px; }
+#assistantNineRouterControls label { margin-bottom:10px; }
+#assistantCustomModelWrap { margin-bottom:10px; }
+.assistant-9router-help { margin-top:8px!important;line-height:1.5!important; }
+.assistant-9router-help code { background:#20272d;color:var(--mint);padding:2px 5px;border-radius:4px;font-family:monospace;font-size:10px; }
 .assistant-composer:has(.assistant-brief[open]) { max-height:390px;overflow-y:auto; }
 .assistant-quality details { margin:12px 0;border-top:1px solid #314441;padding-top:10px; }
 .assistant-quality summary { color:#b4d5cb;font-size:11px;cursor:pointer; }
